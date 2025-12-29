@@ -129,29 +129,31 @@
 
             <hr style="margin:25px 0; border-color:#334155;">
 
-            <label style="color:var(--primary);">🚀 Code Maître Universel</label>
+            <label style="color:var(--primary);">🚀 Code Maître Universel (v2.0.17)</label>
             <p style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
-                Flashez ce code une seule fois. La carte créera un WiFi nommé <b>"ESP32-LAB-SETUP"</b> pour demander vos accès.
+                Flashez ce code une seule fois. La carte utilisera <b>WiFiManager par tzapu</b> pour se connecter.
             </p>
             
             <textarea id="master-code-text" style="height:180px; font-size:10px; background:#000; color:#22c55e;" readonly>
 #include <WiFi.h>
 #include <WebServer.h>
-#include <DNSServer.h>
+#include <WiFiManager.h> // Nécessite version 2.0.17
+#include <HTTPUpdateServer.h>
 
-// Ce code est universel : aucun mot de passe à écrire ici !
 WebServer server(80);
-DNSServer dnsServer;
+HTTPUpdateServer httpUpdater;
 
 void setup() {
   Serial.begin(115200);
-  // Ici on lancerait le gestionnaire de WiFi automatique
-  // (Nécessite la bibliothèque WiFiManager dans Arduino IDE)
-  Serial.println("Mode Configuration Activé");
-  pinMode(2, OUTPUT);
+  WiFiManager wm;
+  wm.autoConnect("ESP32-LAB-SETUP");
+  
+  httpUpdater.setup(&server);
+  
   server.on("/led", [](){ 
     String s = server.arg("status");
-    digitalWrite(2, s == "ON" ? HIGH : LOW);
+    digitalWrite(14, s == "ON" ? LOW : HIGH);
+    server.sendHeader("Access-Control-Allow-Origin", "*");
     server.send(200, "text/plain", "OK"); 
   });
   server.begin();
@@ -160,10 +162,6 @@ void loop() { server.handleClient(); }
             </textarea>
             
             <button class="btn" style="background:#334155" onclick="copyMaster()">📋 Copier le code universel</button>
-            
-            <div style="margin-top:20px; font-size:11px; color:#94a3b8;">
-                💡 <i>Note : Pour utiliser ce mode, installez la bibliothèque <b>WiFiManager</b> dans votre logiciel Arduino.</i>
-            </div>
         </div>
     </div>
 
@@ -180,10 +178,13 @@ void loop() { server.handleClient(); }
             
             <label>Composants</label><textarea id="edit-comp" rows="2"></textarea>
             <label>Notes</label><textarea id="edit-notes" rows="2"></textarea>
-            <label>Code Arduino</label>
-            <textarea id="edit-code" style="height:150px; font-family:monospace; background:#000; color:#22c55e;"></textarea>
+            
+            <label style="color:var(--primary);">📦 Fichier Projet (.bin)</label>
+            <input type="file" id="bin-upload" accept=".bin">
             
             <button class="btn" style="background:var(--primary); border:2px solid #fff;" onclick="runOnCard()">🚀 EXÉCUTER SUR LA CARTE</button>
+            <div id="upload-status" style="font-size:12px; text-align:center; margin-top:5px;"></div>
+
             <button id="btn-done" class="btn" onclick="toggleStatus()">Marquer comme TERMINÉ ✅</button>
             <button class="btn" style="background:none; color:var(--danger); margin-top:20px;" onclick="deleteFolder()">Supprimer le dossier</button>
         </div>
@@ -217,4 +218,81 @@ void loop() { server.handleClient(); }
 
         function openFolder(i) {
             currentIdx = i; const f = db[i];
-            d
+            document.getElementById('edit-title').innerText = f.name;
+            document.getElementById('edit-comp').value = f.comp || "";
+            document.getElementById('edit-notes').value = f.notes || "";
+            tempImg = f.img || "";
+            const imgPrev = document.getElementById('proj-img-preview');
+            imgPrev.src = tempImg; imgPrev.style.display = tempImg ? 'block' : 'none';
+            document.getElementById('upload-status').innerText = "";
+            updateStatusUI(f.status); openModal('modal-project');
+        }
+
+        function saveProject() {
+            db[currentIdx] = {...db[currentIdx], comp: document.getElementById('edit-comp').value, notes: document.getElementById('edit-notes').value, img: tempImg};
+            localStorage.setItem('lab_folders', JSON.stringify(db)); closeModal('modal-project'); renderFolders();
+        }
+
+        function previewFile() {
+            const file = document.getElementById('img-upload').files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => { tempImg = reader.result; document.getElementById('proj-img-preview').src = tempImg; document.getElementById('proj-img-preview').style.display = 'block'; }
+            if(file) reader.readAsDataURL(file);
+        }
+
+        function saveWifi() {
+            localStorage.setItem('esp_ip', document.getElementById('ip-input').value);
+            alert("IP enregistrée !"); closeModal('modal-wifi');
+        }
+
+        function copyMaster() { 
+            const area = document.getElementById('master-code-text');
+            area.select(); document.execCommand('copy'); 
+            alert("Code universel copié !"); 
+        }
+
+        function sendCmd(path) {
+            const ip = localStorage.getItem('esp_ip');
+            if(!ip) return alert("Configure l'IP d'abord !");
+            fetch(`http://${ip}/${path}`, { mode: 'no-cors' }).catch(()=>{});
+        }
+
+        async function runOnCard() {
+            const ip = localStorage.getItem('esp_ip');
+            const fileInput = document.getElementById('bin-upload');
+            const statusDiv = document.getElementById('upload-status');
+
+            if(!ip) return alert("Configure l'IP d'abord !");
+            if(fileInput.files.length === 0) return alert("Choisis un fichier .bin !");
+
+            const formData = new FormData();
+            formData.append("update", fileInput.files[0]);
+
+            statusDiv.innerText = "⏳ Installation par WiFi...";
+            statusDiv.style.color = "var(--primary)";
+
+            try {
+                await fetch(`http://${ip}/update`, {
+                    method: 'POST',
+                    body: formData,
+                    mode: 'no-cors'
+                });
+                statusDiv.innerText = "✅ Succès ! La carte redémarre.";
+                statusDiv.style.color = "var(--success)";
+            } catch (e) {
+                statusDiv.innerText = "❌ Erreur de connexion.";
+                statusDiv.style.color = "var(--danger)";
+            }
+        }
+
+        function toggleStatus() { db[currentIdx].status = db[currentIdx].status === 'done' ? 'prep' : 'done'; updateStatusUI(db[currentIdx].status); }
+        function updateStatusUI(s) { const b = document.getElementById('btn-done'); b.innerText = s === 'done' ? "✅ TERMINÉ" : "Marquer comme TERMINÉ ✅"; b.style.background = s === 'done' ? "var(--success)" : "#334155"; }
+        function newFolder() { const n = prompt("Nom du projet ?"); if(n) { db.push({name:n, status:'prep'}); localStorage.setItem('lab_folders', JSON.stringify(db)); renderFolders(); } }
+        function deleteFolder() { if(confirm("Supprimer ?")) { db.splice(currentIdx, 1); localStorage.setItem('lab_folders', JSON.stringify(db)); closeModal('modal-project'); renderFolders(); } }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        
+        window.onload = () => { document.getElementById('ip-input').value = localStorage.getItem('esp_ip') || ""; };
+    </script>
+</body>
+</html>
