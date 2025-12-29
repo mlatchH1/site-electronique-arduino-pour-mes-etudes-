@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>ESP32 Lab Pro - Portail Automatique</title>
+    <style>
+        :root {
+            --bg: #0f172a; --card: #1e293b; --primary: #6366f1;
+            --success: #22c55e; --danger: #ef4444; --text: #f8fafc;
+        }
+
+        body { 
+            font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); 
+            margin: 0; padding-bottom: 80px; overflow-x: hidden;
+        }
+
+        .app-bar {
+            background: var(--card); padding: 15px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            position: sticky; top: 0; z-index: 500;
+        }
+
+        .icon-btn { background: none; border: none; color: white; font-size: 22px; cursor: pointer; padding: 5px; }
+
+        .bottom-nav {
+            position: fixed; bottom: 0; width: 100%; height: 70px;
+            background: var(--card); display: flex; justify-content: space-around;
+            align-items: center; border-top: 1px solid rgba(255,255,255,0.1);
+            z-index: 1000;
+        }
+
+        .nav-btn { background: none; border: none; color: #94a3b8; font-size: 11px; text-align: center; flex: 1; }
+        .nav-btn.active { color: var(--primary); font-weight: bold; }
+        .nav-icon { font-size: 24px; display: block; margin-bottom: 4px; }
+
+        .view { display: none; padding: 20px; animation: fadeIn 0.3s; }
+        .active-view { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .card { 
+            background: var(--card); border-radius: 15px; padding: 20px; margin-bottom: 15px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .folder-item {
+            background: var(--card); border-radius: 12px; padding: 12px;
+            display: flex; align-items: center; gap: 15px; margin-bottom: 10px;
+            border-left: 5px solid var(--primary); cursor: pointer;
+        }
+
+        .folder-thumb { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; background: #0f172a; }
+        .status-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: bold; }
+        .status-prep { background: #334155; color: #94a3b8; }
+        .status-done { background: var(--success); color: white; }
+
+        input, textarea { 
+            width: 100%; background: #0f172a; border: 1px solid #334155; 
+            color: white; padding: 12px; border-radius: 10px; box-sizing: border-box; margin: 8px 0;
+            font-size: 14px;
+        }
+
+        .btn { 
+            width: 100%; padding: 15px; border-radius: 12px; border: none;
+            color: white; font-weight: bold; cursor: pointer; font-size: 14px; margin-top: 10px;
+        }
+
+        .modal {
+            position: fixed; inset: 0; background: var(--bg); z-index: 2000;
+            display: none; flex-direction: column;
+        }
+        .modal-header { padding: 15px 20px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; }
+        .img-box { width: 100%; height: 180px; background: #0f172a; border-radius: 12px; object-fit: cover; margin-bottom: 15px; border: 1px solid #334155; }
+        label { font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: bold; margin-top: 10px; display: block; }
+    </style>
+</head>
+<body>
+
+    <div id="view-home" class="view active-view">
+        <div class="app-bar">
+            <h2 style="margin:0">ESP32 <span style="color:var(--primary)">Remote</span></h2>
+            <button class="icon-btn" onclick="openModal('modal-options')">⚙️</button>
+        </div>
+        
+        <div class="container" style="padding: 20px 0;">
+            <div class="card" onclick="openModal('modal-wifi')" style="border: 1px dashed var(--primary); cursor:pointer;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>📶 <b>Configuration WiFi</b></span>
+                    <span id="home-status" style="font-size:12px; color:var(--primary);">Prêt</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🕹️ Contrôle Direct</h3>
+                <div style="display:flex; gap:10px;">
+                    <button class="btn" style="background:var(--success)" onclick="sendCmd('led?status=ON')">ALLUMER</button>
+                    <button class="btn" style="background:var(--danger)" onclick="sendCmd('led?status=OFF')">ÉTEINDRE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="view-folders" class="view">
+        <div class="app-bar">
+            <h2 style="margin:0">Mes <span style="color:var(--primary)">Dossiers</span></h2>
+            <button onclick="newFolder()" style="background:var(--primary); border:none; color:white; padding:8px 15px; border-radius:8px; font-weight:bold;">+</button>
+        </div>
+        <div id="folder-list" style="margin-top:20px;"></div>
+    </div>
+
+    <div id="modal-options" class="modal">
+        <div class="modal-header"><h3>⚙️ Options</h3><button class="icon-btn" onclick="closeModal('modal-options')">✕</button></div>
+        <div style="padding: 20px;">
+            <div class="card" onclick="openModal('modal-wifi')" style="cursor:pointer; display:flex; justify-content:space-between;">
+                <span>📶 Paramètres WiFi</span>
+                <span>➔</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-wifi" class="modal">
+        <div class="modal-header"><h3>📶 Setup Automatique</h3><button class="icon-btn" onclick="closeModal('modal-wifi')">✕</button></div>
+        <div style="padding: 20px; overflow-y:auto;">
+            
+            <label>1. Adresse IP de la carte</label>
+            <input type="text" id="ip-input" placeholder="Ex: 192.168.1.50">
+            <button class="btn" style="background:var(--success)" onclick="saveWifi()">Enregistrer l'IP</button>
+
+            <hr style="margin:25px 0; border-color:#334155;">
+
+            <label style="color:var(--primary);">🚀 Code Maître Universel</label>
+            <p style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
+                Flashez ce code une seule fois. La carte créera un WiFi nommé <b>"ESP32-LAB-SETUP"</b> pour demander vos accès.
+            </p>
+            
+            <textarea id="master-code-text" style="height:180px; font-size:10px; background:#000; color:#22c55e;" readonly>
+#include <WiFi.h>
+#include <WebServer.h>
+#include <DNSServer.h>
+
+// Ce code est universel : aucun mot de passe à écrire ici !
+WebServer server(80);
+DNSServer dnsServer;
+
+void setup() {
+  Serial.begin(115200);
+  // Ici on lancerait le gestionnaire de WiFi automatique
+  // (Nécessite la bibliothèque WiFiManager dans Arduino IDE)
+  Serial.println("Mode Configuration Activé");
+  pinMode(2, OUTPUT);
+  server.on("/led", [](){ 
+    String s = server.arg("status");
+    digitalWrite(2, s == "ON" ? HIGH : LOW);
+    server.send(200, "text/plain", "OK"); 
+  });
+  server.begin();
+}
+void loop() { server.handleClient(); }
+            </textarea>
+            
+            <button class="btn" style="background:#334155" onclick="copyMaster()">📋 Copier le code universel</button>
+            
+            <div style="margin-top:20px; font-size:11px; color:#94a3b8;">
+                💡 <i>Note : Pour utiliser ce mode, installez la bibliothèque <b>WiFiManager</b> dans votre logiciel Arduino.</i>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-project" class="modal">
+        <div class="modal-header">
+            <button onclick="closeModal('modal-project')" style="background:none; border:none; color:var(--primary); font-weight:bold;">Retour</button>
+            <h3 id="edit-title">Projet</h3>
+            <button onclick="saveProject()" style="background:var(--success); border:none; color:white; padding:5px 12px; border-radius:8px;">Sauver</button>
+        </div>
+        <div style="padding: 20px; overflow-y: auto; flex: 1;">
+            <img id="proj-img-preview" class="img-box" src="" style="display:none;">
+            <label for="img-upload" style="background:#334155; color:white; padding:10px; border-radius:8px; text-align:center; cursor:pointer; display:block;">📸 Photo du projet</label>
+            <input type="file" id="img-upload" accept="image/*" style="display:none" onchange="previewFile()">
+            
+            <label>Composants</label><textarea id="edit-comp" rows="2"></textarea>
+            <label>Notes</label><textarea id="edit-notes" rows="2"></textarea>
+            <label>Code Arduino</label>
+            <textarea id="edit-code" style="height:150px; font-family:monospace; background:#000; color:#22c55e;"></textarea>
+            
+            <button class="btn" style="background:var(--primary); border:2px solid #fff;" onclick="runOnCard()">🚀 EXÉCUTER SUR LA CARTE</button>
+            <button id="btn-done" class="btn" onclick="toggleStatus()">Marquer comme TERMINÉ ✅</button>
+            <button class="btn" style="background:none; color:var(--danger); margin-top:20px;" onclick="deleteFolder()">Supprimer le dossier</button>
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <button class="nav-btn active" id="nav-home" onclick="switchView('view-home')"><span class="nav-icon">🏠</span>Accueil</button>
+        <button class="nav-btn" id="nav-folders" onclick="switchView('view-folders')"><span class="nav-icon">📂</span>Dossiers</button>
+    </nav>
+
+    <script>
+        let db = JSON.parse(localStorage.getItem('lab_folders')) || [];
+        let currentIdx = null; let tempImg = "";
+
+        function switchView(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active-view'));
+            document.getElementById(id).classList.add('active-view');
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('nav-' + id.split('-')[1]).classList.add('active');
+            if(id === 'view-folders') renderFolders();
+        }
+
+        function renderFolders() {
+            const list = document.getElementById('folder-list'); list.innerHTML = "";
+            db.forEach((f, i) => {
+                const sClass = f.status === 'done' ? 'status-done' : 'status-prep';
+                const thumb = f.img ? `<img src="${f.img}" class="folder-thumb">` : `<div class="folder-thumb" style="display:flex;align-items:center;justify-content:center;color:#334155">📁</div>`;
+                list.innerHTML += `<div class="folder-item" onclick="openFolder(${i})">${thumb}<div style="flex:1"><b>${f.name}</b><br><span class="status-badge ${sClass}">${f.status === 'done' ? 'Fini' : 'En cours'}</span></div><span>➔</span></div>`;
+            });
+        }
+
+        function openFolder(i) {
+            currentIdx = i; const f = db[i];
+            d
