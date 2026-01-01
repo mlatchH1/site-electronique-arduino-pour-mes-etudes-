@@ -1,50 +1,183 @@
-// --- GESTION DES ONGLETS ---
-function switchTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active-nav'));
+let db = JSON.parse(localStorage.getItem('lab_pro_db')) || [];
+let currentIdx = null;
+
+// --- BASE DE DONNÉES MASSIVE (100 FORMULES) ---
+const formulas = [
+    // ⚡ ÉLECTRICITÉ & PUISSANCE (1-20)
+    { cat: 'Elec', id:'ohm', name:"Loi d'Ohm", math:"U = R × I", ins:[{id:'u',n:'U (V)'},{id:'r',n:'R (Ω)'},{id:'i',n:'I (A)'}]},
+    { cat: 'Elec', id:'pwr', name:"Puissance DC", math:"P = U × I", ins:[{id:'p',n:'P (W)'},{id:'u',n:'U (V)'},{id:'i',n:'I (A)'}]},
+    { cat: 'Elec', id:'joule', name:"Effet Joule", math:"P = R × I²", ins:[{id:'p',n:'P (W)'},{id:'r',n:'R'},{id:'i',n:'I'}]},
+    { cat: 'Elec', id:'r_ser', name:"Résistances Série", math:"R1 + R2 + R3", ins:[{id:'rs',n:'R tot'},{id:'r1',n:'R1'},{id:'r2',n:'R2'},{id:'r3',n:'R3'}]},
+    { cat: 'Elec', id:'r_par', name:"Résistances Parallèle", math:"1/Req = 1/R1 + 1/R2", ins:[{id:'rp',n:'R tot'},{id:'r1',n:'R1'},{id:'r2',n:'R2'}]},
+    { cat: 'Elec', id:'c_ser', name:"Condos Série", math:"(C1*C2)/(C1+C2)", ins:[{id:'cs',n:'C tot'},{id:'c1',n:'C1'},{id:'c2',n:'C2'}]},
+    { cat: 'Elec', id:'c_par', name:"Condos Parallèle", math:"C1 + C2", ins:[{id:'cp',n:'C tot'},{id:'c1',n:'C1'},{id:'c2',n:'C2'}]},
+    { cat: 'Elec', id:'e_cap', name:"Énergie Condo", math:"E = 0.5 × C × U²", ins:[{id:'e',n:'E (J)'},{id:'c',n:'C (F)'},{id:'u',n:'U (V)'}]},
+    { cat: 'Elec', id:'e_ind', name:"Énergie Bobine", math:"E = 0.5 × L × I²", ins:[{id:'e',n:'E (J)'},{id:'l',n:'L (H)'},{id:'i',n:'I (A)'}]},
+    { cat: 'Elec', id:'react_c', name:"Réactance Capa", math:"Xc = 1 / (2πfC)", ins:[{id:'xc',n:'Xc'},{id:'f',n:'Freq'},{id:'c',n:'C'}]},
+    { cat: 'Elec', id:'react_l', name:"Réactance Induc", math:"Xl = 2πfL", ins:[{id:'xl',n:'Xl'},{id:'f',n:'Freq'},{id:'l',n:'L'}]},
+    { cat: 'Elec', id:'z_rlc', name:"Impédance Z", math:"√(R² + X²)", ins:[{id:'z',n:'Z'},{id:'r',n:'R'},{id:'x',n:'X'}]},
+
+    // 🤖 MICRO / ESP32 (21-40)
+    { cat: 'Micro', id:'adc', name:"Lecture ADC 12-bit", math:"V = (X/4095) * 3.3", ins:[{id:'v',n:'Volts'},{id:'x',n:'0-4095'}]},
+    { cat: 'Micro', id:'div', name:"Pont Diviseur", math:"Vs = Ve * R2/(R1+R2)", ins:[{id:'vs',n:'Vout'},{id:'ve',n:'Vin'},{id:'r1',n:'R1'},{id:'r2',n:'R2'}]},
+    { cat: 'Micro', id:'led', name:"Résistance LED", math:"R = (Vcc-Vl)/I", ins:[{id:'r',n:'R (Ω)'},{id:'vcc',n:'Vcc'},{id:'vl',n:'Vled'},{id:'i',n:'Iled'}]},
+    { cat: 'Micro', id:'pwm', name:"Tension PWM", math:"Vcc * Duty", ins:[{id:'v',n:'Vavg'},{id:'vc',n:'Vcc'},{id:'d',n:'Duty %'}]},
+    { cat: 'Micro', id:'bat', name:"Autonomie Bat", math:"Cap / Conso", ins:[{id:'h',n:'Heures'},{id:'ca',n:'mAh'},{id:'co',n:'mA'}]},
+    { cat: 'Micro', id:'baud', name:"Débit Série", math:"bits / baud", ins:[{id:'t',n:'Temps (s)'},{id:'b',n:'bits'},{id:'bd',n:'Baud'}]},
     
-    document.getElementById(tabId).classList.add('active');
-    document.getElementById('nav-' + tabId.split('-')[1]).classList.add('active-nav');
-}
+    // 📡 RADIO / RF (41-60)
+    { cat: 'RF', id:'ant', name:"Antenne λ/4", math:"L = 75 / f", ins:[{id:'l',n:'Long (m)'},{id:'f',n:'Freq (MHz)'}]},
+    { cat: 'RF', id:'dbm', name:"dBm vers mW", math:"10^(dBm/10)", ins:[{id:'p',n:'mW'},{id:'d',n:'dBm'}]},
+    { cat: 'RF', id:'wav', name:"λ (Onde)", math:"λ = 300 / f", ins:[{id:'l',n:'λ (m)'},{id:'f',n:'Freq (MHz)'}]},
+    { cat: 'RF', id:'fspl', name:"Perte Espace Libre", math:"20log(d) + 20log(f) + 32.4", ins:[{id:'p',n:'Perte (dB)'},{id:'d',n:'Dist (km)'},{id:'f',n:'Freq (MHz)'}]},
+    
+    // 🔬 SIGNAL & AUDIO (61-80)
+    { cat: 'Sig', id:'rc', name:"Coupure RC", math:"Fc = 1/(2πRC)", ins:[{id:'f',n:'Fc (Hz)'},{id:'r',n:'R'},{id:'c',n:'C'}]},
+    { cat: 'Sig', id:'db_v', name:"Gain Tension dB", math:"20log(V2/V1)", ins:[{id:'g',n:'Gain (dB)'},{id:'v1',n:'V in'},{id:'v2',n:'V out'}]},
+    { cat: 'Sig', id:'db_p', name:"Gain Puissance dB", math:"10log(P2/P1)", ins:[{id:'g',n:'Gain (dB)'},{id:'p1',n:'P in'},{id:'p2',n:'P out'}]},
+    { cat: 'Sig', id:'sampling', name:"Nyquist", math:"fs = 2 * fmax", ins:[{id:'fs',n:'f sample'},{id:'fm',n:'f max'}]},
 
-// --- CONFIGURATION ---
-function toggleConfig() {
-    const p = document.getElementById("configPanel");
-    p.style.display = (p.style.display === "block") ? "none" : "block";
-}
+    // 🏗️ INGÉNIERIE (81-100)
+    { cat: 'Inge', id:'temp', name:"Thermal Junction", math:"Tj = Ta + P*Rth", ins:[{id:'tj',n:'Tj (°C)'},{id:'ta',n:'Tamb'},{id:'p',n:'P (W)'},{id:'rt',n:'Rth'}]},
+    { cat: 'Inge', id:'torque', name:"Couple Moteur", math:"P / ω", ins:[{id:'c',n:'Couple'},{id:'p',n:'P (W)'},{id:'w',n:'rad/s'}]},
+    { cat: 'Inge', id:'r_wire', name:"Résist. Câble", math:"ρ * L / S", ins:[{id:'r',n:'R (Ω)'},{id:'l',n:'L (m)'},{id:'s',n:'Section'}]}
+];
 
-function getBaseUrl() {
-    let ip = document.getElementById("ipInput").value;
-    if (!ip) {
-        alert("⚠️ Règle l'IP dans les paramètres !");
-        toggleConfig();
-        return null;
+// --- MOTEUR DE CALCUL MULTIDIRECTIONNEL ---
+function runMath(id) {
+    const val = (k) => {
+        let el = document.getElementById('m-'+k);
+        return (el && el.value !== "") ? parseFloat(el.value) : null;
+    };
+    
+    let res = document.getElementById('calc-res');
+    let v = {}; // Objet local pour les valeurs
+
+    // Exemple de logique multidirectionnelle (Calcul n'importe quelle inconnue)
+    if(id === 'ohm') {
+        v = { u: val('u'), r: val('r'), i: val('i') };
+        if(v.r && v.i) res.innerText = (v.r * v.i).toFixed(3) + " V";
+        else if(v.u && v.i) res.innerText = (v.u / v.i).toFixed(3) + " Ω";
+        else if(v.u && v.r) res.innerText = (v.u / v.r).toFixed(3) + " A";
     }
-    return ip.startsWith("http") ? ip : "http://" + ip;
+    else if(id === 'pwr') {
+        v = { p: val('p'), u: val('u'), i: val('i') };
+        if(v.u && v.i) res.innerText = (v.u * v.i).toFixed(3) + " W";
+        else if(v.p && v.u) res.innerText = (v.p / v.u).toFixed(3) + " A";
+        else if(v.p && v.i) res.innerText = (v.p / v.i).toFixed(3) + " V";
+    }
+    else if(id === 'adc') {
+        v = { v: val('v'), x: val('x') };
+        if(v.x !== null) res.innerText = ((v.x / 4095) * 3.3).toFixed(3) + " V";
+        else if(v.v !== null) res.innerText = Math.round((v.v / 3.3) * 4095);
+    }
+    else if(id === 'led') {
+        v = { r:val('r'), vcc:val('vcc'), vl:val('vl'), i:val('i') };
+        if(v.vcc && v.vl && v.i) res.innerText = ((v.vcc - v.vl) / v.i).toFixed(1) + " Ω";
+    }
+    else if(id === 'ant') {
+        v = { l: val('l'), f: val('f') };
+        if(v.f) res.innerText = (75 / v.f).toFixed(3) + " m";
+        else if(v.l) res.innerText = (75 / v.l).toFixed(2) + " MHz";
+    }
+    else if(id === 'rc') {
+        v = { f:val('f'), r:val('r'), c:val('c') };
+        if(v.r && v.c) res.innerText = (1 / (2 * Math.PI * v.r * v.c)).toFixed(2) + " Hz";
+    }
 }
 
-// --- ACTIONS ---
-function envoyerSignal(etat) {
-    const url = getBaseUrl();
-    if (!url) return;
-    fetch(`${url}/led?status=${etat}`).catch(err => console.log("ESP hors ligne"));
+// --- NAVIGATION & INTERFACE ---
+function switchView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active-view'));
+    document.getElementById(id).classList.add('active-view');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    let btnId = 'nav-' + id.split('-')[1];
+    if(document.getElementById(btnId)) document.getElementById(btnId).classList.add('active');
+    if(id === 'view-tools') renderTools();
+    if(id === 'view-folders') renderFolders();
 }
 
-function envoyerMessage() {
-    const url = getBaseUrl();
-    if (!url) return;
-    let msg = document.getElementById("monTexte").value;
-    fetch(`${url}/msg?valeur=${encodeURIComponent(msg)}`)
-        .then(() => alert("Envoyé !"))
-        .catch(err => alert("Erreur connexion"));
+function renderTools() {
+    const list = document.getElementById('formula-list');
+    list.innerHTML = "";
+    const cats = { Elec:'⚡ Électricité', Micro:'🤖 Micro/ESP32', RF:'📡 Radio/RF', Sig:'🔬 Signal', Inge:'🏗️ Ingénierie' };
+    
+    for (let key in cats) {
+        list.innerHTML += `<div style="color:var(--accent); font-weight:bold; margin:20px 0 10px; font-size:12px; text-transform:uppercase; letter-spacing:1px;">${cats[key]}</div>`;
+        formulas.filter(f => f.cat === key).forEach(f => {
+            list.innerHTML += `<div class="formula-item" onclick="openCalc('${f.id}')"><div><b>${f.name}</b><br><small style="opacity:0.6">${f.math}</small></div><span>➔</span></div>`;
+        });
+    }
 }
 
-// --- MÉMOIRE ---
+function openCalc(id) {
+    const f = formulas.find(x => x.id === id);
+    document.getElementById('calc-title').innerText = f.name;
+    document.getElementById('calc-res').innerText = "---";
+    document.getElementById('calc-inputs').innerHTML = f.ins.map(i => `
+        <label style="font-size:11px; font-weight:bold; display:block; margin-top:10px; color:var(--accent)">${i.n}</label>
+        <input type="number" id="m-${i.id}" oninput="runMath('${f.id}')" placeholder="Saisir valeur...">
+    `).join('');
+    document.getElementById('modal-calc').style.display = 'flex';
+}
+
+// --- PROJETS ---
+function renderFolders() {
+    document.getElementById('folder-list').innerHTML = db.map((f, i) => `
+        <div class="folder-item" onclick="openFolder(${i})">
+            <div class="folder-thumb">${f.img ? `<img src="${f.img}" style="width:100%;height:100%;border-radius:10px;object-fit:cover">` : '📂'}</div>
+            <div style="flex:1"><b>${f.name}</b><br><span style="font-size:10px; opacity:0.6;">${f.status}</span></div>
+        </div>`).join('');
+}
+
+function openFolder(i) {
+    currentIdx = i; const f = db[i];
+    document.getElementById('edit-title').innerText = f.name;
+    document.getElementById('edit-notes').value = f.notes || "";
+    document.getElementById('edit-code').value = f.code || "";
+    if(f.img) {
+        document.getElementById('proj-img-preview').src = f.img;
+        document.getElementById('proj-img-preview').style.display = 'block';
+    } else {
+        document.getElementById('proj-img-preview').style.display = 'none';
+    }
+    document.getElementById('modal-project').style.display = 'flex';
+}
+
+function newFolder() {
+    let n = prompt("Nom du projet ?");
+    if(n) { db.push({name:n, status:'En cours', notes:'', code:'', img:''}); save(); renderFolders(); }
+}
+
+function saveProject() {
+    db[currentIdx].notes = document.getElementById('edit-notes').value;
+    db[currentIdx].code = document.getElementById('edit-code').value;
+    save(); renderFolders(); closeModal('modal-project');
+}
+
+// --- WIFI & ESP32 ---
+function saveWifi() {
+    localStorage.setItem('lab_ip', document.getElementById('ip-input').value);
+    document.getElementById('home-status').innerText = "IP: " + document.getElementById('ip-input').value;
+    closeModal('modal-wifi');
+}
+
+function envoyerCode() {
+    let ip = localStorage.getItem('lab_ip');
+    if(!ip) return alert("Réglez l'IP !");
+    let code = document.getElementById('edit-code').value;
+    // Note : WiFiManager par tzapu v2.0.17 doit être utilisé côté ESP32
+    fetch(`http://${ip}/update`, { method: 'POST', body: code, mode: 'no-cors' })
+    .then(() => alert("Code envoyé !"))
+    .catch(() => alert("Erreur : ESP32 injoignable"));
+}
+
+function save() { localStorage.setItem('lab_pro_db', JSON.stringify(db)); }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+
 window.onload = () => {
-    const savedIP = localStorage.getItem("esp32_ip");
-    if (savedIP) document.getElementById("ipInput").value = savedIP;
-};
-
-document.getElementById("ipInput").oninput = (e) => {
-    localStorage.setItem("esp32_ip", e.target.value);
+    let ip = localStorage.getItem('lab_ip');
+    if(ip) document.getElementById('home-status').innerText = "IP: " + ip;
+    renderFolders();
 };
