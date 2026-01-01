@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>ESP32 Lab Pro - Encyclopédie Complète</title>
+    <title>ESP32 Lab Pro - Ultimate Edition</title>
     <style>
         :root {
             --bg: #0f172a; --card: #1e293b; --primary: #6366f1;
@@ -16,6 +16,7 @@
             margin: 0; padding-bottom: 80px; overflow-x: hidden;
         }
 
+        /* Barre supérieure */
         .app-bar {
             background: var(--card); padding: 15px 20px;
             display: flex; justify-content: space-between; align-items: center;
@@ -23,6 +24,7 @@
             position: sticky; top: 0; z-index: 500;
         }
 
+        /* Navigation basse */
         .bottom-nav {
             position: fixed; bottom: 0; width: 100%; height: 70px;
             background: var(--card); display: flex; justify-content: space-around;
@@ -34,10 +36,12 @@
         .nav-btn.active { color: var(--primary); font-weight: bold; }
         .nav-icon { font-size: 24px; display: block; margin-bottom: 4px; }
 
+        /* Vues */
         .view { display: none; padding: 20px; animation: fadeIn 0.2s; }
         .active-view { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+        /* Éléments de liste */
         .card { 
             background: var(--card); border-radius: 15px; padding: 20px; margin-bottom: 15px;
             border: 1px solid rgba(255,255,255,0.05);
@@ -50,10 +54,8 @@
         }
 
         .folder-thumb { width: 55px; height: 55px; border-radius: 10px; object-fit: cover; background: #0f172a; display: flex; align-items: center; justify-content: center; font-size: 24px;}
-        .status-badge { font-size: 10px; padding: 3px 10px; border-radius: 12px; font-weight: bold; text-transform: uppercase;}
-        .status-prep { background: #334155; color: #94a3b8; }
-        .status-done { background: var(--success); color: white; }
-
+        
+        /* Formulaires */
         input, textarea { 
             width: 100%; background: #0f172a; border: 1px solid #334155; 
             color: white; padding: 12px; border-radius: 10px; box-sizing: border-box; margin: 8px 0; font-size: 14px;
@@ -65,24 +67,30 @@
         }
         .btn:active { transform: scale(0.98); }
 
+        /* Modales */
         .modal { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: none; flex-direction: column; }
         .modal-header { padding: 15px 20px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; background: var(--card); }
         
         .code-editor { background: #000; color: #22c55e; font-family: 'Courier New', monospace; height: 250px; border: 1px solid var(--primary); padding: 12px; font-size: 12px; line-height: 1.4;}
-        .img-preview { width: 100%; height: 200px; border-radius: 15px; object-fit: cover; margin-bottom: 15px; background: #000; border: 1px solid #334155;}
+        .img-preview { width: 100%; height: 180px; border-radius: 15px; object-fit: cover; margin-bottom: 15px; background: #000; border: 1px solid #334155;}
 
-        .formula-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
         .formula-item {
             background: var(--card); padding: 18px; border-radius: 15px;
             display: flex; justify-content: space-between; align-items: center;
-            border: 1px solid rgba(255,255,255,0.05); cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.05); cursor: pointer; margin-bottom: 10px;
+        }
+
+        .menu-option {
+            background: var(--card); padding: 20px; border-radius: 15px;
+            display: flex; align-items: center; gap: 15px; margin-bottom: 10px;
+            border: 1px solid rgba(255,255,255,0.1); cursor: pointer;
         }
     </style>
 </head>
 <body>
 
     <div id="view-home" class="view active-view">
-        <div class="app-bar"><h2>ESP32 <span style="color:var(--primary)">Lab</span></h2><button onclick="openModal('modal-wifi')" style="background:none; border:none; font-size:24px;">📶</button></div>
+        <div class="app-bar"><h2>ESP32 <span style="color:var(--primary)">Lab</span></h2><button onclick="openModal('modal-settings-menu')" style="background:none; border:none; font-size:24px;">📶</button></div>
         <div class="card" style="margin-top:20px;">
             <h3>🕹️ Contrôle Direct</h3>
             <p id="home-status" style="font-size:13px; color:var(--accent);">IP: Non configurée</p>
@@ -94,67 +102,65 @@
     </div>
 
     <div id="view-folders" class="view">
-        <div class="app-bar"><h2>Mes Projets</h2><button onclick="newFolder()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:bold;">+ NOUVEAU</button></div>
+        <div class="app-bar"><h2>Projets</h2><button onclick="newFolder()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:bold;">+ NOUVEAU</button></div>
         <div id="folder-list" style="margin-top:15px;"></div>
     </div>
 
     <div id="view-tools" class="view">
         <div class="app-bar"><h2>Engineering</h2></div>
-        <p style="font-size:12px; color:#94a3b8; margin: 10px 0 20px 0;">Encyclopédie technique et calculateurs temps-réel.</p>
-        <div class="formula-grid" id="formula-list"></div>
+        <div id="formula-list" style="margin-top:15px; padding-bottom: 100px;"></div>
     </div>
 
-    <div id="modal-calc" class="modal">
-        <div class="modal-header">
-            <button onclick="closeModal('modal-calc')" style="color:var(--primary); background:none; border:none; font-weight:bold; font-size:16px;">✕ Fermer</button>
-            <h3 id="calc-title" style="margin:0">Calcul</h3><div style="width:40px"></div>
+    <div id="modal-settings-menu" class="modal">
+        <div class="modal-header"><h3>Options</h3><button onclick="closeModal('modal-settings-menu')" style="background:none; border:none; color:white; font-size:20px;">✕</button></div>
+        <div style="padding: 20px;">
+            <div class="menu-option" onclick="closeModal('modal-settings-menu'); openModal('modal-wifi');">
+                <span style="font-size:24px;">⚙️</span>
+                <div><b>Configuration WiFi</b><br><small style="color:#94a3b8;">IP de l'ESP32</small></div>
+            </div>
         </div>
-        <div style="padding: 20px; overflow-y: auto; flex: 1;">
-            <div class="card" style="border: 1px solid var(--accent);">
-                <div id="calc-inputs"></div>
-                <div style="text-align: center; margin-top:20px; border-top:1px solid #334155; padding-top:15px;">
-                    <div style="font-size:11px; color:var(--accent); font-weight:bold; letter-spacing:1px;">RÉSULTAT</div>
-                    <div id="calc-res" style="font-size: 32px; font-family: 'Courier New', monospace; font-weight:bold; color:#fff;">---</div>
-                </div>
-            </div>
-            <div class="card" style="border-left: 5px solid var(--primary); background: rgba(99, 102, 241, 0.05);">
-                <b style="color:var(--primary); font-size:16px; display:block; margin-bottom:8px;">📜 Histoire / Contexte</b>
-                <p id="calc-hist" style="font-size:14px; color:#cbd5e1; line-height:1.6; margin-bottom:20px;"></p>
-                <b style="color:var(--primary); font-size:16px; display:block; margin-bottom:8px;">⚙️ Fonctionnement</b>
-                <p id="calc-func" style="font-size:14px; color:#cbd5e1; line-height:1.6;"></p>
-            </div>
+    </div>
+
+    <div id="modal-wifi" class="modal">
+        <div class="modal-header"><button onclick="openModal('modal-settings-menu'); closeModal('modal-wifi');" style="background:none; border:none; color:white;">←</button><h3>Réseau</h3><button onclick="closeModal('modal-wifi')">✕</button></div>
+        <div style="padding: 20px;">
+            <label>IP de l'ESP32</label>
+            <input type="text" id="ip-input" placeholder="Ex: 192.168.1.50">
+            <button class="btn" style="background:var(--primary)" onclick="saveWifi()">SAUVEGARDER</button>
+            <p style="font-size:12px; color:#94a3b8; margin-top:20px;">Bibliothèque : <b>WiFiManager tzapu v2.0.17</b></p>
         </div>
     </div>
 
     <div id="modal-project" class="modal">
         <div class="modal-header">
-            <button onclick="closeModal('modal-project')" style="color:var(--primary); background:none; border:none; font-weight:bold; font-size:16px;">← Retour</button>
+            <button onclick="closeModal('modal-project')" style="color:var(--primary); background:none; border:none; font-weight:bold;">← Retour</button>
             <h3 id="edit-title">Détails</h3>
-            <button onclick="saveProject()" style="background:var(--success); color:white; border:none; padding:8px 15px; border-radius:10px; font-weight:bold;">ENREGISTRER</button>
+            <button onclick="saveProject()" style="background:var(--success); color:white; border:none; padding:8px 15px; border-radius:10px;">OK</button>
         </div>
         <div style="padding: 20px; overflow-y: auto; flex: 1;">
             <img id="proj-img-preview" class="img-preview" style="display:none;">
-            <label for="img-upload" style="background:#334155; color:white; padding:12px; border-radius:10px; display:block; text-align:center; cursor:pointer; margin-bottom:20px; font-weight:bold;">📸 Ajouter / Modifier Photo</label>
+            <label for="img-upload" style="background:#334155; color:white; padding:12px; border-radius:10px; display:block; text-align:center; cursor:pointer; margin-bottom:20px;">📸 Photo du projet</label>
             <input type="file" id="img-upload" accept="image/*" style="display:none" onchange="previewFile()">
             
-            <label style="color:var(--accent); font-weight:bold; font-size:12px;">NOTES DU PROJET (PINOUT, SCHÉMAS...)</label>
-            <textarea id="edit-notes" rows="5" placeholder="Saisissez vos notes ici..."></textarea>
+            <label style="color:var(--accent); font-size:11px; font-weight:bold;">NOTES (PINOUT, SCHÉMA)</label>
+            <textarea id="edit-notes" rows="4" placeholder="Notes..."></textarea>
             
-            <label style="color:var(--accent); font-weight:bold; font-size:12px; margin-top:15px; display:block;">CODE ARDUINO (WiFiManager v2.0.17)</label>
-            <textarea id="edit-code" class="code-editor" spellcheck="false" placeholder="// Collez votre code ici..."></textarea>
+            <label style="color:var(--accent); font-size:11px; font-weight:bold; margin-top:15px; display:block;">CODE ARDUINO (WiFiManager v2.0.17)</label>
+            <textarea id="edit-code" class="code-editor" spellcheck="false"></textarea>
             
+            <button class="btn" style="background:var(--primary)" onclick="envoyerCode()">📤 ENVOYER LE CODE</button>
             <button id="btn-done" class="btn" onclick="toggleStatus()"></button>
-            <button class="btn" style="background:none; color:var(--danger); border: 1px solid var(--danger); margin-top:20px;" onclick="deleteFolder()">SUPPRIMER LE PROJET</button>
+            <button class="btn" style="background:none; color:var(--danger); border:1px solid var(--danger);" onclick="deleteFolder()">SUPPRIMER LE PROJET</button>
         </div>
     </div>
 
-    <div id="modal-wifi" class="modal">
-        <div class="modal-header"><h3>Configuration Réseau</h3><button onclick="closeModal('modal-wifi')" style="background:none; border:none; color:white; font-size:20px;">✕</button></div>
-        <div style="padding: 20px;">
-            <label>Adresse IP de l'ESP32</label>
-            <input type="text" id="ip-input" placeholder="Ex: 192.168.1.50">
-            <button class="btn" style="background:var(--primary)" onclick="saveWifi()">CONNECTER L'APPLICATION</button>
-            <p style="font-size:12px; color:#94a3b8; margin-top:20px; line-height:1.4;">L'ESP32 doit être sur le même réseau et utiliser la bibliothèque <b>WiFiManager par tzapu (v-2.0.17)</b>.</p>
+    <div id="modal-calc" class="modal">
+        <div class="modal-header"><button onclick="closeModal('modal-calc')" style="color:var(--primary); background:none; border:none;">✕ Fermer</button><h3 id="calc-title">Calcul</h3><div style="width:40px"></div></div>
+        <div style="padding: 20px; overflow-y: auto;">
+            <div class="card" style="text-align: center; border: 1px solid var(--accent);">
+                <div id="calc-res" style="font-size: 32px; font-weight:bold; color:#fff;">---</div>
+            </div>
+            <div id="calc-inputs"></div>
         </div>
     </div>
 
@@ -164,188 +170,7 @@
         <button class="nav-btn" id="nav-tools" onclick="switchView('view-tools')"><span class="nav-icon">🧮</span>Outils</button>
     </nav>
 
-    <script>
-        let db = JSON.parse(localStorage.getItem('lab_pro_db')) || [];
-        let currentIdx = null;
-        let tempImg = "";
-
-        // --- TOUTES LES FORMULES : ANCIENNES + NOUVELLES DU DOCUMENT ---
-        const formulas = [
-            // ANCIENNES FORMULES
-            { id:'ohm', name:"Loi d'Ohm", math:"U = R × I", hist: "Georg Ohm (1827). Base absolue de l'électricité.", func: "Relie la Tension, le Courant et la Résistance.", ins:[{id:'u',n:'U (V)'},{id:'i',n:'I (A)'},{id:'r',n:'R (Ω)'}]},
-            { id:'pwr', name:"Puissance DC", math:"P = U × I", hist: "James Watt. Calcule l'énergie consommée par seconde.", func: "Crucial pour dimensionner les alimentations.", ins:[{id:'p',n:'P (W)'},{id:'u',n:'U (V)'},{id:'i',n:'I (A)'}]},
-            { id:'led', name:"Résistance LED", math:"R = (Vcc-Vl)/Il", hist: "Application directe pour protéger vos LED.", func: "Évite de brûler les pins de l'ESP32.", ins:[{id:'vcc',n:'Vcc (V)'},{id:'vl',n:'Vled (V)'},{id:'il',n:'Iled (A)'}]},
-            { id:'div', name:"Pont Diviseur", math:"Vs = Ve*(R2/Rt)", hist: "Méthode classique de réduction de tension.", func: "Permet de lire 12V avec un ADC 3.3V.", ins:[{id:'ve',n:'Ve (V)'},{id:'r1',n:'R1 (Ω)'},{id:'r2',n:'R2 (Ω)'}]},
-            { id:'adc', name:"ADC ESP32 (12-bit)", math:"V = (X/4095)*3.3", hist: "L'ESP32 a une résolution de 4096 paliers.", func: "Convertit la valeur brute du capteur en Volts.", ins:[{id:'x',n:'Valeur (0-4095)'}]},
-            { id:'dac', name:"DAC ESP32 (8-bit)", math:"V = (X/255)*3.3", hist: "Pins 25 et 26 uniquement.", func: "Génère une tension réelle à partir d'un code.", ins:[{id:'x',n:'Valeur (0-255)'}]},
-            { id:'rc', name:"Coupure RC", math:"fc = 1/2πRC", hist: "Filtrage des signaux parasites.", func: "Calcule la fréquence de coupure d'un filtre.", ins:[{id:'r',n:'R (Ω)'},{id:'c',n:'C (F)'}]},
-            { id:'bat', name:"Autonomie Batterie", math:"T = Cap/Conso", hist: "Estimation de longévité.", func: "Estime la durée de vie du projet en heures.", ins:[{id:'cap',n:'Capacité (mAh)'},{id:'con',n:'Conso (mA)'}]},
-            { id:'freq', name:"Fréquence/Période", math:"f = 1/T", hist: "Base des timers et PWM.", func: "Convertit le temps d'un cycle en Hertz.", ins:[{id:'t',n:'Période (s)'}]},
-            { id:'wave', name:"Longueur d'onde λ", math:"λ = c/f", hist: "James Clerk Maxwell.", func: "Calcule la taille d'une onde (WiFi/LoRa).", ins:[{id:'f',n:'Fréquence (MHz)'}]},
-            { id:'dbm', name:"dBm vers mW", math:"10^(P/10)", hist: "Graham Bell.", func: "Convertit la puissance du signal WiFi.", ins:[{id:'dbm',n:'Puissance (dBm)'}]},
-            { id:'pwm', name:"Tension Moy. PWM", math:"Vcc * Duty", hist: "Contrôle de vitesse/luminosité.", func: "Tension résultante du hachage.", ins:[{id:'vcc',n:'Vcc (V)'},{id:'d',n:'Duty Cycle (%)'}]},
-            { id:'c_par', name:"Condos //", math:"C1 + C2", hist: "Stockage cumulé.", func: "Capacité équivalente en parallèle.", ins:[{id:'c1',n:'C1'},{id:'c2',n:'C2'}]},
-            { id:'react_c', name:"Réactance Capa", math:"1/2πfC", hist: "Résistance complexe alternative.", func: "Impédance d'un condensateur selon f.", ins:[{id:'f',n:'Hz'},{id:'c',n:'F'}]},
-            { id:'react_l', name:"Réactance Induc", math:"2πfL", hist: "Joseph Henry.", func: "Blocage des hautes fréquences par bobine.", ins:[{id:'f',n:'Hz'},{id:'l',n:'H'}]},
-            { id:'chg', name:"Temps de Charge", math:"Cap / I_chg", hist: "Chargeur Li-Ion.", func: "Temps pour remplir une batterie.", ins:[{id:'cap',n:'mAh'},{id:'ichg',n:'Courant (mA)'}]},
-            { id:'pullup', name:"Pull-up", math:"V / R", hist: "Logique TTL.", func: "Courant circulant dans une pull-up.", ins:[{id:'vcc',n:'Vcc'},{id:'r',n:'R'}]},
-            { id:'torque', name:"Couple/Puis.", math:"P / ω", hist: "Mécanique Newtonienne.", func: "Lien entre force rotative et puissance.", ins:[{id:'p',n:'Watts'},{id:'w',n:'Vitesse (rad/s)'}]},
-
-            // NOUVELLES FORMULES DU DOCUMENT PDF
-            { id:'pouillet', name:"Loi de Pouillet", math:"R = (ρ × L) / S", hist: "Claude Pouillet (1837). Dépend de la nature, longueur et section.", func: "Calcule la résistance d'un fil (Cuivre: ρ=0.017).", ins:[{id:'rho',n:'ρ (Resistivité)'},{id:'l',n:'L (m)'},{id:'s',n:'S (mm²)'}]},
-            { id:'mathiessen', name:"Loi de Mathiessen", math:"Rt = R0(1 + αt)", hist: "Variation de résistance avec la température.", func: "Prédit la résistance à chaud. α (cuivre)=0.0039.", ins:[{id:'r0',n:'R à 0°C'},{id:'alpha',n:'α'},{id:'t',n:'Temp. (°C)'}]},
-            { id:'qty_curr', name:"Quantité de courant", math:"Q = I × t", hist: "Charge électrique stockée.", func: "Calcule la charge totale en Coulombs.", ins:[{id:'i',n:'I (A)'},{id:'t',n:'Temps (s)'}]},
-            { id:'section_geom', name:"Section Circulaire", math:"S = π × r²", hist: "Géométrie des conducteurs.", func: "Trouve la section S pour la loi de Pouillet.", ins:[{id:'r',n:'Rayon (mm)'}]},
-            { id:'res_serie', name:"Résistances Série", math:"R1 + R2 + ...", hist: "Loi des mailles.", func: "Somme des résistances bout à bout.", ins:[{id:'r1',n:'R1'},{id:'r2',n:'R2'}]},
-            { id:'res_para', name:"Résistances //", math:"(R1*R2)/(R1+R2)", hist: "Loi des nœuds.", func: "Résistance équivalente côte à côte.", ins:[{id:'r1',n:'R1'},{id:'r2',n:'R2'}]},
-            { id:'joule_doc', name:"Loi de Joule", math:"Q = R*I²*t", hist: "James Joule (1841).", func: "Chaleur dissipée en Joules.", ins:[{id:'r',n:'R'},{id:'i',n:'I'},{id:'t',n:'s'}]}
-        ];
-
-        // --- NAVIGATION ---
-        function switchView(id) {
-            document.querySelectorAll('.view').forEach(v => v.classList.remove('active-view'));
-            document.getElementById(id).classList.add('active-view');
-            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById('nav-' + id.split('-')[1]).classList.add('active');
-            if(id==='view-tools') renderTools();
-            if(id==='view-folders') renderFolders();
-        }
-
-        // --- OUTILS & CALCULS ---
-        function renderTools() {
-            const list = document.getElementById('formula-list');
-            list.innerHTML = formulas.map((f, i) => `
-                <div class="formula-item" onclick="openCalc(${i})">
-                    <div><b>${f.name}</b><br><span style="font-family:monospace; color:var(--accent); font-size:11px;">${f.math}</span></div>
-                    <span style="color:var(--primary); font-size:20px;">➔</span>
-                </div>
-            `).join('');
-        }
-
-        function openCalc(idx) {
-            const f = formulas[idx];
-            document.getElementById('calc-title').innerText = f.name;
-            document.getElementById('calc-hist').innerText = f.hist;
-            document.getElementById('calc-func').innerText = f.func;
-            document.getElementById('calc-res').innerText = "---";
-            document.getElementById('calc-inputs').innerHTML = f.ins.map(inp => `
-                <label style="font-size:11px; color:var(--accent); font-weight:bold; text-transform:uppercase;">${inp.n}</label>
-                <input type="number" id="m-${inp.id}" placeholder="0" oninput="runMath('${f.id}')">
-            `).join('');
-            openModal('modal-calc');
-        }
-
-        function runMath(id) {
-            const g = (k) => parseFloat(document.getElementById('m-'+k).value);
-            const res = document.getElementById('calc-res');
-            let out = "---";
-            try {
-                // ANCIENS CALCULS
-                if(id==='ohm') { let u=g('u'), i=g('i'), r=g('r'); if(u&&i) out=(u/i).toFixed(2)+"Ω"; else if(i&&r) out=(i*r).toFixed(2)+"V"; else if(u&&r) out=(u/r).toFixed(3)+"A"; }
-                if(id==='pwr') { let u=g('u'), i=g('i'); if(u&&i) out=(u*i).toFixed(2)+"W"; }
-                if(id==='led') { let v=g('vcc'), vl=g('vl'), il=g('il'); if(v&&vl&&il) out=((v-vl)/il).toFixed(1)+"Ω"; }
-                if(id==='div') { let ve=g('ve'), r1=g('r1'), r2=g('r2'); if(ve&&r1&&r2) out=(ve*(r2/(r1+r2))).toFixed(2)+"V"; }
-                if(id==='adc') { let x=g('x'); if(x>=0) out=((x/4095)*3.3).toFixed(3)+"V"; }
-                if(id==='dac') { let x=g('x'); if(x>=0) out=((x/255)*3.3).toFixed(2)+"V"; }
-                if(id==='bat') { let c=g('cap'), co=g('con'); if(c&&co) out=(c/co).toFixed(1)+"h"; }
-                if(id==='rc') { let r=g('r'), c=g('c'); if(r&&c) out=(1/(2*Math.PI*r*c)).toFixed(1)+"Hz"; }
-                if(id==='freq') { let t=g('t'); if(t) out=(1/t).toFixed(1)+"Hz"; }
-                if(id==='pwm') { let v=g('vcc'), d=g('d'); if(v&&d) out=(v*(d/100)).toFixed(2)+"V"; }
-                
-                // NOUVEAUX CALCULS DU DOCUMENT
-                if(id==='pouillet') { let r=g('rho'), l=g('l'), s=g('s'); if(r&&l&&s) out=(r*l/s).toFixed(4)+" Ω"; }
-                if(id==='mathiessen') { let r0=g('r0'), a=g('alpha'), t=g('t'); if(r0&&a&&t) out=(r0*(1+(a*t))).toFixed(3)+" Ω"; }
-                if(id==='qty_curr') { let i=g('i'), t=g('t'); if(i&&t) out=(i*t).toFixed(2)+" C"; }
-                if(id==='section_geom') { let r=g('r'); if(r) out=(Math.PI*r*r).toFixed(3)+" mm²"; }
-                if(id==='res_serie') { let r1=g('r1'), r2=g('r2'); if(r1||r2) out=((r1||0)+(r2||0)).toFixed(1)+" Ω"; }
-                if(id==='res_para') { let r1=g('r1'), r2=g('r2'); if(r1&&r2) out=((r1*r2)/(r1+r2)).toFixed(2)+" Ω"; }
-                if(id==='joule_doc') { let r=g('r'), i=g('i'), t=g('t'); if(r&&i&&t) out=(r*i*i*t).toFixed(0)+" J"; }
-                
-            } catch(e){}
-            res.innerText = (out.includes("NaN") || out.includes("Infinity")) ? "---" : out;
-        }
-
-        // --- GESTION PROJETS ---
-        function renderFolders() {
-            const list = document.getElementById('folder-list'); 
-            list.innerHTML = "";
-            db.forEach((f, i) => {
-                const sClass = f.status === 'done' ? 'status-done' : 'status-prep';
-                const thumb = f.img ? `<img src="${f.img}" class="folder-thumb">` : `<div class="folder-thumb">📁</div>`;
-                list.innerHTML += `<div class="folder-item" onclick="openFolder(${i})">${thumb}<div style="flex:1"><b>${f.name}</b><br><span class="status-badge ${sClass}">${f.status=='done'?'Terminé':'En cours'}</span></div><span style="color:var(--primary)">➔</span></div>`;
-            });
-        }
-
-        function openFolder(i) {
-            currentIdx = i; const f = db[i];
-            document.getElementById('edit-title').innerText = f.name;
-            document.getElementById('edit-notes').value = f.notes || "";
-            document.getElementById('edit-code').value = f.code || "";
-            tempImg = f.img || "";
-            const prev = document.getElementById('proj-img-preview');
-            prev.src = tempImg; prev.style.display = tempImg ? 'block' : 'none';
-            updateStatusUI(f.status); 
-            openModal('modal-project');
-        }
-
-        function newFolder() {
-            const n = prompt("Nom du nouveau projet ?");
-            if(n && n.trim() !== "") {
-                db.push({name: n.trim(), status: 'prep', notes: '', code: '', img: ''});
-                localStorage.setItem('lab_pro_db', JSON.stringify(db));
-                renderFolders();
-            }
-        }
-
-        function saveProject() {
-            db[currentIdx].notes = document.getElementById('edit-notes').value;
-            db[currentIdx].code = document.getElementById('edit-code').value;
-            db[currentIdx].img = tempImg;
-            localStorage.setItem('lab_pro_db', JSON.stringify(db));
-            renderFolders(); closeModal('modal-project');
-        }
-
-        function deleteFolder() {
-            if(confirm("Supprimer ce projet ?")) {
-                db.splice(currentIdx, 1);
-                localStorage.setItem('lab_pro_db', JSON.stringify(db));
-                renderFolders(); closeModal('modal-project');
-            }
-        }
-
-        function previewFile() { 
-            const file = document.getElementById('img-upload').files[0]; 
-            const reader = new FileReader(); 
-            reader.onloadend = () => { tempImg = reader.result; const p = document.getElementById('proj-img-preview'); p.src = tempImg; p.style.display = 'block'; }; 
-            if(file) reader.readAsDataURL(file); 
-        }
-
-        function toggleStatus() { db[currentIdx].status = db[currentIdx].status === 'done' ? 'prep' : 'done'; updateStatusUI(db[currentIdx].status); }
-        function updateStatusUI(s) { const b = document.getElementById('btn-done'); b.innerText = s === 'done' ? "✅ PROJET TERMINÉ" : "MARQUER COMME FINI"; b.style.background = s === 'done' ? "var(--success)" : "#334155"; }
-
-        // --- WIFI ---
-        function saveWifi() { 
-            const ip = document.getElementById('ip-input').value; 
-            localStorage.setItem('lab_ip', ip); 
-            document.getElementById('home-status').innerText = "IP: " + ip; 
-            closeModal('modal-wifi'); 
-            alert("IP enregistrée !");
-        }
-
-        function sendCmd(path) { 
-            const ip = localStorage.getItem('lab_ip'); 
-            if(!ip) return alert("Configurez l'IP !");
-            fetch(`http://${ip}/${path}`, { mode: 'no-cors' }).catch(() => alert("ESP32 injoignable")); 
-        }
-
-        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        
-        window.onload = () => { 
-            const ip = localStorage.getItem('lab_ip'); 
-            if(ip) { document.getElementById('ip-input').value = ip; document.getElementById('home-status').innerText = "IP: " + ip; }
-            renderFolders(); renderTools();
-        };
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
+
