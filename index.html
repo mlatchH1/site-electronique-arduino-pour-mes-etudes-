@@ -61,6 +61,16 @@
             color: white; padding: 12px; border-radius: 10px; box-sizing: border-box; margin: 8px 0; font-size: 14px;
         }
 
+        /* Masquer les flèches des inputs number */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
         .btn { 
             width: 100%; padding: 15px; border-radius: 12px; border: none;
             color: white; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.2s;
@@ -145,6 +155,101 @@
             <input type="text" id="ip-input" placeholder="Ex: 192.168.1.50">
             <button class="btn" style="background:var(--primary)" onclick="saveWifi()">SAUVEGARDER</button>
             <p style="font-size:12px; color:#94a3b8; margin-top:20px;">Bibliothèque : <b>WiFiManager tzapu v2.0.17</b></p>
+            <div style="margin-top:20px;">
+                <h4>Code Arduino pour connexion</h4>
+                <p>Copiez ce code dans l'IDE Arduino et téléversez-le sur votre carte ESP8266/ESP32.</p>
+                <pre style="background:#000; color:#22c55e; padding:15px; border-radius:10px; font-family:monospace; font-size:12px; overflow-x:auto; white-space:pre-wrap;">#include &lt;ESP8266WiFi.h&gt;
+#include &lt;ESP8266WebServer.h&gt;
+#include &lt;Servo.h&gt;
+
+const char* ssid = "VotreSSID";
+const char* password = "VotreMotDePasse";
+
+ESP8266WebServer server(80);
+Servo servo;
+
+void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+  }
+  Serial.println(WiFi.localIP());
+  server.on("/led", handleLed);
+  server.on("/execute", HTTP_POST, handleExecute);
+  server.begin();
+}
+
+void loop() {
+  server.handleClient();
+}
+
+void handleLed() {
+  String status = server.arg("status");
+  if (status == "ON") {
+    digitalWrite(LED_BUILTIN, LOW);
+  } else {
+    digitalWrite(LED_BUILTIN, HIGH);
+  }
+  server.send(200, "text/plain", "OK");
+}
+
+void handleExecute() {
+  String code = server.arg("plain");
+  Serial.println("Code reçu: " + code);
+  
+  // Parser et exécuter les commandes ligne par ligne
+  int start = 0;
+  int end = code.indexOf('\n');
+  while (end != -1) {
+    String line = code.substring(start, end);
+    executeCommand(line);
+    start = end + 1;
+    end = code.indexOf('\n', start);
+  }
+  if (start < code.length()) {
+    executeCommand(code.substring(start));
+  }
+  
+  server.send(200, "text/plain", "Code exécuté");
+}
+
+void executeCommand(String cmd) {
+  cmd.trim();
+  if (cmd.startsWith("led ")) {
+    int space1 = cmd.indexOf(' ', 4);
+    int pin = cmd.substring(4, space1).toInt();
+    String state = cmd.substring(space1 + 1);
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, state == "on" ? LOW : HIGH);
+  } else if (cmd.startsWith("servo ")) {
+    int space1 = cmd.indexOf(' ', 6);
+    int pin = cmd.substring(6, space1).toInt();
+    int angle = cmd.substring(space1 + 1).toInt();
+    servo.attach(pin);
+    servo.write(angle);
+  } else if (cmd.startsWith("delay ")) {
+    int ms = cmd.substring(6).toInt();
+    delay(ms);
+  } else if (cmd.startsWith("tone ")) {
+    int space1 = cmd.indexOf(' ', 5);
+    int pin = cmd.substring(5, space1).toInt();
+    int freq = cmd.substring(space1 + 1).toInt();
+    tone(pin, freq);
+  } else if (cmd.startsWith("noTone ")) {
+    int pin = cmd.substring(7).toInt();
+    noTone(pin);
+  } else if (cmd.startsWith("analogWrite ")) {
+    int space1 = cmd.indexOf(' ', 11);
+    int pin = cmd.substring(11, space1).toInt();
+    int val = cmd.substring(space1 + 1).toInt();
+    analogWrite(pin, val);
+  }
+  // Ajoutez d'autres commandes ici
+}</pre>
+                <p>Modifiez le SSID et le mot de passe, puis téléversez. Notez l'IP dans le moniteur série.</p>
+            </div>
         </div>
     </div>
 
@@ -162,10 +267,17 @@
             <label style="color:var(--accent); font-size:11px; font-weight:bold;">NOTES (PINOUT, SCHÉMA)</label>
             <textarea id="edit-notes" rows="4" placeholder="Notes..."></textarea>
             
-            <label style="color:var(--accent); font-size:11px; font-weight:bold; margin-top:15px; display:block;">CODE ARDUINO (WiFiManager v2.0.17)</label>
-            <textarea id="edit-code" class="code-editor" spellcheck="false"></textarea>
-            
-            <button class="btn" style="background:var(--primary)" onclick="envoyerCode()">📤 ENVOYER LE CODE</button>
+            <label style="color:var(--accent); font-size:11px; font-weight:bold; margin-top:15px; display:block;">CODE ARDUINO</label>
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <label><input type="radio" name="code-mode" value="ide" checked onchange="toggleMode()"> Mode IDE (copier-coller)</label>
+                <label><input type="radio" name="code-mode" value="wifi" onchange="toggleMode()"> Mode WiFi (exécution)</label>
+            </div>
+            <textarea id="edit-code" class="code-editor" spellcheck="false" placeholder="Écrivez votre code Arduino ici.
+
+Mode IDE : code complet avec setup/loop pour copier-coller dans l'IDE.
+Mode WiFi : commandes simples pour exécution distante (ex: led 13 on, delay 1000)."></textarea>
+            <button class="btn" style="background:#22c55e; margin-top:10px;" id="btn-copy" onclick="copyCode()">📋 COPIER LE CODE</button>
+            <button class="btn" style="background:var(--primary); margin-top:10px;" id="btn-execute" onclick="envoyerCode()" style="display:none;">📤 EXÉCUTER VIA WIFI</button>
             <button id="btn-done" class="btn" onclick="toggleStatus()"></button>
             <button class="btn" style="background:none; color:var(--danger); border:1px solid var(--danger);" onclick="deleteFolder()">SUPPRIMER LE PROJET</button>
         </div>
@@ -178,6 +290,7 @@
                 <div id="calc-res" style="font-size: 32px; font-weight:bold; color:#fff;">---</div>
             </div>
             <div id="calc-inputs"></div>
+            <button class="btn" style="background:var(--danger); margin-top:15px;" onclick="clearCalc()">RESET</button>
         </div>
     </div>
 
