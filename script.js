@@ -40,17 +40,17 @@ const formulas = [
     // 🏗️ INGÉNIERIE (81-100)
     { cat: 'Inge', id:'temp', name:"Thermal Junction", math:"Tj = Ta + P*Rth", ins:[{id:'tj',n:'Tj (°C)'},{id:'ta',n:'Tamb'},{id:'p',n:'P (W)'},{id:'rt',n:'Rth'}]},
     { cat: 'Inge', id:'torque', name:"Couple Moteur", math:"P / ω", ins:[{id:'c',n:'Couple'},{id:'p',n:'P (W)'},{id:'w',n:'rad/s'}]},
-    { cat: 'Inge', id:'r_wire', name:"Résist. Câble", math:"ρ * L / S", ins:[{id:'r',n:'R (Ω)'},{id:'l',n:'L (m)'},{id:'s',n:'Section'}]}
+    { cat: 'Inge', id:'r_wire', name:"Résist. Câble", math:"R = ρ × L / S", ins:[{id:'r',n:'R (Ω)'},{id:'l',n:'L (m)'},{id:'s',n:'Section (m²)'},{id:'mat',n:'Matériau'}]}
 ];
 
 // --- MOTEUR DE CALCUL MULTIDIRECTIONNEL ---
 function runMath(id) {
     const val = (k) => {
-        let el = document.getElementById('m-'+k);
+        let el = document.getElementById('m-' + id + '-' + k);
         return (el && el.value !== "") ? parseFloat(el.value) : null;
     };
     
-    let res = document.getElementById('calc-res');
+    let res = document.getElementById('res-' + id);
     let v = {}; // Objet local pour les valeurs
 
     // Exemple de logique multidirectionnelle (Calcul n'importe quelle inconnue)
@@ -59,30 +59,112 @@ function runMath(id) {
         if(v.r && v.i) res.innerText = (v.r * v.i).toFixed(3) + " V";
         else if(v.u && v.i) res.innerText = (v.u / v.i).toFixed(3) + " Ω";
         else if(v.u && v.r) res.innerText = (v.u / v.r).toFixed(3) + " A";
+        else res.innerText = "---";
     }
     else if(id === 'pwr') {
         v = { p: val('p'), u: val('u'), i: val('i') };
         if(v.u && v.i) res.innerText = (v.u * v.i).toFixed(3) + " W";
         else if(v.p && v.u) res.innerText = (v.p / v.u).toFixed(3) + " A";
         else if(v.p && v.i) res.innerText = (v.p / v.i).toFixed(3) + " V";
+        else res.innerText = "---";
+    }
+    else if(id === 'joule') {
+        v = { p: val('p'), r: val('r'), i: val('i') };
+        if(v.r && v.i) res.innerText = (v.r * v.i * v.i).toFixed(3) + " W";
+        else res.innerText = "---";
     }
     else if(id === 'adc') {
         v = { v: val('v'), x: val('x') };
         if(v.x !== null) res.innerText = ((v.x / 4095) * 3.3).toFixed(3) + " V";
         else if(v.v !== null) res.innerText = Math.round((v.v / 3.3) * 4095);
+        else res.innerText = "---";
+    }
+    else if(id === 'div') {
+        v = { vs: val('vs'), ve: val('ve'), r1: val('r1'), r2: val('r2') };
+        if(v.ve && v.r1 && v.r2) res.innerText = (v.ve * v.r2 / (v.r1 + v.r2)).toFixed(3) + " V";
+        else res.innerText = "---";
     }
     else if(id === 'led') {
         v = { r:val('r'), vcc:val('vcc'), vl:val('vl'), i:val('i') };
         if(v.vcc && v.vl && v.i) res.innerText = ((v.vcc - v.vl) / v.i).toFixed(1) + " Ω";
+        else res.innerText = "---";
+    }
+    else if(id === 'pwm') {
+        v = { v: val('v'), vc: val('vc'), d: val('d') };
+        if(v.vc && v.d !== null) res.innerText = (v.vc * v.d / 100).toFixed(3) + " V";
+        else res.innerText = "---";
+    }
+    else if(id === 'bat') {
+        v = { h: val('h'), ca: val('ca'), co: val('co') };
+        if(v.ca && v.co) res.innerText = (v.ca / v.co).toFixed(1) + " h";
+        else res.innerText = "---";
+    }
+    else if(id === 'baud') {
+        v = { t: val('t'), b: val('b'), bd: val('bd') };
+        if(v.b && v.bd) res.innerText = (v.b / v.bd).toFixed(3) + " s";
+        else res.innerText = "---";
     }
     else if(id === 'ant') {
         v = { l: val('l'), f: val('f') };
         if(v.f) res.innerText = (75 / v.f).toFixed(3) + " m";
         else if(v.l) res.innerText = (75 / v.l).toFixed(2) + " MHz";
+        else res.innerText = "---";
+    }
+    else if(id === 'dbm') {
+        v = { p: val('p'), d: val('d') };
+        if(v.d !== null) res.innerText = (Math.pow(10, v.d / 10)).toFixed(3) + " mW";
+        else if(v.p) res.innerText = (10 * Math.log10(v.p)).toFixed(1) + " dBm";
+        else res.innerText = "---";
+    }
+    else if(id === 'wav') {
+        v = { l: val('l'), f: val('f') };
+        if(v.f) res.innerText = (300 / v.f).toFixed(3) + " m";
+        else if(v.l) res.innerText = (300 / v.l).toFixed(2) + " MHz";
+        else res.innerText = "---";
+    }
+    else if(id === 'fspl') {
+        v = { p: val('p'), d: val('d'), f: val('f') };
+        if(v.d && v.f) res.innerText = (20 * Math.log10(v.d) + 20 * Math.log10(v.f) + 32.4).toFixed(1) + " dB";
+        else res.innerText = "---";
     }
     else if(id === 'rc') {
         v = { f:val('f'), r:val('r'), c:val('c') };
         if(v.r && v.c) res.innerText = (1 / (2 * Math.PI * v.r * v.c)).toFixed(2) + " Hz";
+        else res.innerText = "---";
+    }
+    else if(id === 'db_v') {
+        v = { g: val('g'), v1: val('v1'), v2: val('v2') };
+        if(v.v1 && v.v2) res.innerText = (20 * Math.log10(v.v2 / v.v1)).toFixed(1) + " dB";
+        else res.innerText = "---";
+    }
+    else if(id === 'db_p') {
+        v = { g: val('g'), p1: val('p1'), p2: val('p2') };
+        if(v.p1 && v.p2) res.innerText = (10 * Math.log10(v.p2 / v.p1)).toFixed(1) + " dB";
+        else res.innerText = "---";
+    }
+    else if(id === 'sampling') {
+        v = { fs: val('fs'), fm: val('fm') };
+        if(v.fm) res.innerText = (2 * v.fm) + " Hz";
+        else res.innerText = "---";
+    }
+    else if(id === 'temp') {
+        v = { tj: val('tj'), ta: val('ta'), p: val('p'), rt: val('rt') };
+        if(v.ta && v.p && v.rt) res.innerText = (v.ta + v.p * v.rt).toFixed(1) + " °C";
+        else res.innerText = "---";
+    }
+    else if(id === 'torque') {
+        v = { c: val('c'), p: val('p'), w: val('w') };
+        if(v.p && v.w) res.innerText = (v.p / v.w).toFixed(3) + " Nm";
+        else res.innerText = "---";
+    }
+    else if(id === 'r_wire') {
+        const rho = { cu: 1.68e-8, al: 2.65e-8, fe: 9.71e-8, ag: 1.59e-8, au: 2.44e-8 };
+        v = { r: val('r'), l: val('l'), s: val('s'), mat: document.getElementById('m-' + id + '-mat').value };
+        if(v.l && v.s && v.mat) res.innerText = (rho[v.mat] * v.l / v.s).toFixed(6) + " Ω";
+        else res.innerText = "---";
+    }
+    else {
+        res.innerText = "---";
     }
 }
 
@@ -105,20 +187,21 @@ function renderTools() {
     for (let key in cats) {
         list.innerHTML += `<div style="color:var(--accent); font-weight:bold; margin:20px 0 10px; font-size:12px; text-transform:uppercase; letter-spacing:1px;">${cats[key]}</div>`;
         formulas.filter(f => f.cat === key).forEach(f => {
-            list.innerHTML += `<div class="formula-item" onclick="openCalc('${f.id}')"><div><b>${f.name}</b><br><small style="opacity:0.6">${f.math}</small></div><span>➔</span></div>`;
+            list.innerHTML += `<div class="formula-item" onclick="toggleCalc('${f.id}')"><div><b>${f.name}</b><br><small style="opacity:0.6">${f.math}</small></div><span id="arrow-${f.id}">➔</span></div><div id="calc-${f.id}" class="calc-container" style="display:none;"><div class="calc-result" id="res-${f.id}">---</div>${f.ins.map(i => i.id === 'mat' ? `<label>${i.n}</label><select id="m-${f.id}-${i.id}" onchange="runMath('${f.id}')"><option value="">Choisir...</option><option value="cu">Cuivre (1.68e-8 Ωm)</option><option value="al">Aluminium (2.65e-8 Ωm)</option><option value="fe">Fer (9.71e-8 Ωm)</option><option value="ag">Argent (1.59e-8 Ωm)</option><option value="au">Or (2.44e-8 Ωm)</option></select>` : `<label>${i.n}</label><input type="number" id="m-${f.id}-${i.id}" oninput="runMath('${f.id}')" placeholder="Saisir valeur...">`).join('')}</div>`;
         });
     }
 }
 
-function openCalc(id) {
-    const f = formulas.find(x => x.id === id);
-    document.getElementById('calc-title').innerText = f.name;
-    document.getElementById('calc-res').innerText = "---";
-    document.getElementById('calc-inputs').innerHTML = f.ins.map(i => `
-        <label style="font-size:11px; font-weight:bold; display:block; margin-top:10px; color:var(--accent)">${i.n}</label>
-        <input type="number" id="m-${i.id}" oninput="runMath('${f.id}')" placeholder="Saisir valeur...">
-    `).join('');
-    document.getElementById('modal-calc').style.display = 'flex';
+function toggleCalc(id) {
+    let calc = document.getElementById('calc-' + id);
+    let arrow = document.getElementById('arrow-' + id);
+    if (calc.style.display === 'none') {
+        calc.style.display = 'block';
+        arrow.innerText = '⬇';
+    } else {
+        calc.style.display = 'none';
+        arrow.innerText = '➔';
+    }
 }
 
 // --- PROJETS ---
