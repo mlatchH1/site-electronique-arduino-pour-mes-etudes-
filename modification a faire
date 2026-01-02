@@ -1,0 +1,17 @@
+----------------probleme:
+--projet;
+rectangle blanc visible,
+les bouton "copier/coller" et "executer wifi" sont visible a l'ouverture du projet alors que sa ne devrais pas etre le cas mais juste 1,
+--reseaux;
+le code n'est pas totalement visible(pc) il faudrais pouvoir legerement descendre sur cette fenetre,
+--formule;
+la calculatrice n'est pas bien configurer et ne fonctionne pas partous,
+le bouton "reset" ne fonctione pas partous non plus 
+
+----------------inutille;
+panneaux de controle n'est pas encore utile
+
+----------------idée d'ajout;
+--ajouter dans l'aceuil un bouton " carte arduino " pour pouvoir ouvrire une page et qui aurais les differente carte arduino ( "uno" et "nano esp32" pour le moment ) et quand on selectionne la carte on peux voir les caractèristique de celle-ci eet bien plus,
+--ajouter dans l'aceuil un bouton " composant " ici on aurais des categorie de composant ces composant ( led, resistance, condansateur, puce, et bien plus) selectionneer ouvrirons leur datasheet, caracteristique, information sur l'utilisation, empatement et autre,
+suite a cette categorie et les composants ajouter dans " projet " nous pourons directement ajouter les composant avec leur caracteristique qui sont sauvegarder si on souhaite clique dessu on peux directement ouvrire l'entiereter de sa page et voir tous se qui est dispinible sur celui-ci 
