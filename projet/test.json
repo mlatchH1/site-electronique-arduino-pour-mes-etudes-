@@ -1,0 +1,26 @@
+{
+  "name": "test",
+  "status": "En cours",
+  "notes": "cgfj",
+  "code": "",
+  "img": "",
+  "components": [
+    {
+      "id": "led-rgb",
+      "categoryId": "led",
+      "name": "LED RGB commune cathode",
+      "category": "LED",
+      "icon": "💡",
+      "data": {
+        "id": "led-rgb",
+        "name": "LED RGB commune cathode",
+        "voltage": "2-3.5V (selon couleur)",
+        "current": "20 mA par canal",
+        "description": "LED tricolore permettant de créer toutes les couleurs en mélangeant rouge, vert et bleu.",
+        "usage": "Éclairage RGB, indicateurs multicolores, ambiance lumineuse. Nécessite 3 résistances (une par couleur) et 4 fils.",
+        "pinout": "Cathode commune (GND) : 2e patte (la plus longue)\nRouge : 1ère patte\nVert : 3e patte\nBleu : 4e patte",
+        "formula": "R(rouge) = (Vcc - 2V) / 0.02A\nR(vert) = (Vcc - 3.2V) / 0.02A\nR(bleu) = (Vcc - 3.2V) / 0.02A"
+      }
+    }
+  ]
+}

@@ -1,5 +1,6 @@
-let db = JSON.parse(localStorage.getItem('lab_pro_db')) || [];
+let db = [];
 let currentIdx = null;
+let projectDirHandle = null; // Handle vers le dossier "projet" (obligatoire pour sauvegarder)
 
 // --- BASE DE DONNÉES DES CARTES ARDUINO ---
 const arduinoBoards = [
@@ -77,10 +78,18 @@ const componentCategories = [
                 voltage: '1.8-2.2V',
                 current: '20 mA',
                 wavelength: '620-625 nm',
-                description: 'LED standard rouge, la plus courante dans les projets Arduino. Tension de seuil typique de 2V.',
-                usage: 'Utilisée comme indicateur d\'état, alarme visuelle, décoration. Toujours utiliser avec une résistance de limitation de courant (220-330Ω pour Arduino 5V).',
+                description: 'LED standard rouge, la plus courante dans les projets électroniques. Tension de seuil typique de 2V.',
+                usage: 'Utilisée comme indicateur d\'état, alarme visuelle, décoration. Toujours utiliser avec une résistance de limitation de courant.',
                 pinout: 'Anode (+) : patte longue\nCathode (-) : patte courte, côté plat',
-                formula: 'Résistance = (Vcc - Vled) / I\nExemple: R = (5V - 2V) / 0.02A = 150Ω (utiliser 220Ω standard)'
+                pinoutImage: 'images/pinouts/led-rouge.png',
+                footprint: 'Espacement des pattes: 2.54mm (0.1")\nDiamètre du corps: 5mm\nHauteur totale: ~8.5mm',
+                footprintImage: 'images/pinouts/led-rouge-footprint.png',
+                formula: 'R = (Vcc - Vled) / I',
+                calculator: {
+                    inputs: [{id: 'vcc', label: 'Tension source (V)', default: 5}, {id: 'vled', label: 'Tension LED (V)', default: 2}, {id: 'iled', label: 'Courant LED (mA)', default: 20}],
+                    calc: '(vcc - vled) / (iled / 1000)',
+                    result: 'Résistance nécessaire: {result} Ω'
+                }
             },
             {
                 id: 'led-rgb',
@@ -90,6 +99,9 @@ const componentCategories = [
                 description: 'LED tricolore permettant de créer toutes les couleurs en mélangeant rouge, vert et bleu.',
                 usage: 'Éclairage RGB, indicateurs multicolores, ambiance lumineuse. Nécessite 3 résistances (une par couleur) et 4 fils.',
                 pinout: 'Cathode commune (GND) : 2e patte (la plus longue)\nRouge : 1ère patte\nVert : 3e patte\nBleu : 4e patte',
+                pinoutImage: 'images/pinouts/led-rgb.png',
+                footprint: 'Espacement des pattes: 2.54mm (0.1")\nConfiguration: 4 pattes en ligne\nDiamètre du corps: 5mm',
+                footprintImage: 'images/pinouts/led-rgb-footprint.png',
                 formula: 'R(rouge) = (Vcc - 2V) / 0.02A\nR(vert) = (Vcc - 3.2V) / 0.02A\nR(bleu) = (Vcc - 3.2V) / 0.02A'
             }
         ]
@@ -865,17 +877,50 @@ function showComponentDetail(categoryId, componentId) {
     if (component.pinout) {
         detailHTML += `
         <div class="card">
-            <h3 style="color:var(--accent); margin-top:0;">📌 Brochage</h3>
-            <pre style="background:#0f172a; padding:15px; border-radius:8px; font-size:12px; line-height:1.6; white-space:pre-wrap;">${component.pinout}</pre>
-        </div>`;
+            <h3 style="color:var(--accent); margin-top:0;">📌 Brochage</h3>`;
+        
+        // Afficher l'image si disponible
+        if (component.pinoutImage) {
+            detailHTML += `
+            <img src="${component.pinoutImage}" alt="Brochage ${component.name}" 
+                 style="max-width:100%; border-radius:8px; margin:10px 0;"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <pre style="background:#0f172a; padding:15px; border-radius:8px; font-size:12px; line-height:1.6; white-space:pre-wrap; display:none;">${component.pinout}</pre>`;
+        } else {
+            detailHTML += `<pre style="background:#0f172a; padding:15px; border-radius:8px; font-size:12px; line-height:1.6; white-space:pre-wrap;">${component.pinout}</pre>`;
+        }
+        
+        detailHTML += `</div>`;
     }
     
     if (component.formula) {
         detailHTML += `
         <div class="card">
             <h3 style="color:var(--accent); margin-top:0;">🧮 Formules</h3>
-            <pre style="background:#0f172a; padding:15px; border-radius:8px; font-size:12px; line-height:1.6; white-space:pre-wrap;">${component.formula}</pre>
-        </div>`;
+            <pre style="background:#0f172a; padding:15px; border-radius:8px; font-size:12px; line-height:1.6; white-space:pre-wrap;">${component.formula}</pre>`;
+        
+        // Ajouter calculateur interactif si disponible
+        if (component.calculator) {
+            detailHTML += `
+            <div style="margin-top:15px; padding:15px; background:#1e293b; border-radius:8px;">
+                <h4 style="margin:0 0 10px 0; color:var(--primary);">⚡ Calculateur</h4>`;
+            
+            component.calculator.inputs.forEach(input => {
+                detailHTML += `
+                <label style="display:block; margin:10px 0; font-size:13px;">
+                    ${input.label}
+                    <input type="number" id="calc-${componentId}-${input.id}" value="${input.default}" 
+                           style="width:100%; padding:8px; margin-top:5px; background:#0f172a; border:1px solid #334155; border-radius:5px; color:white;"
+                           oninput="calculateComponent('${categoryId}', '${componentId}')">
+                </label>`;
+            });
+            
+            detailHTML += `
+                <div id="calc-result-${componentId}" style="margin-top:15px; padding:10px; background:#0f172a; border-radius:5px; font-weight:bold; color:var(--accent);"></div>
+            </div>`;
+        }
+        
+        detailHTML += `</div>`;
     }
     
     if (component.code) {
@@ -896,6 +941,43 @@ function showComponentDetail(categoryId, componentId) {
     
     document.getElementById('component-detail-content').innerHTML = detailHTML;
     openModal('modal-component-detail');
+    
+    // Calculer immédiatement si un calculateur existe
+    if (component.calculator) {
+        calculateComponent(categoryId, componentId);
+    }
+}
+
+// Fonction pour calculer les valeurs du composant
+function calculateComponent(categoryId, componentId) {
+    const category = componentCategories.find(c => c.id === categoryId);
+    if (!category) return;
+    const component = category.components.find(c => c.id === componentId);
+    if (!component || !component.calculator) return;
+    
+    // Récupérer les valeurs des inputs
+    const values = {};
+    component.calculator.inputs.forEach(input => {
+        const elem = document.getElementById(`calc-${componentId}-${input.id}`);
+        if (elem) {
+            values[input.id] = parseFloat(elem.value) || 0;
+        }
+    });
+    
+    // Calculer le résultat
+    try {
+        const result = eval(component.calculator.calc.replace(/(\w+)/g, (match) => {
+            return values[match] !== undefined ? values[match] : match;
+        }));
+        
+        const resultText = component.calculator.result.replace('{result}', result.toFixed(2));
+        const resultElem = document.getElementById(`calc-result-${componentId}`);
+        if (resultElem) {
+            resultElem.innerText = resultText;
+        }
+    } catch (error) {
+        console.error('Erreur calcul:', error);
+    }
 }
 
 function renderTools() {
@@ -926,6 +1008,18 @@ function toggleCalc(id) {
 function renderFolders() {
     const list = document.getElementById('folder-list');
     const countEl = document.getElementById('project-count');
+    const warningEl = document.getElementById('no-folder-warning');
+    
+    // Vérifier si un dossier est configuré
+    if (!projectDirHandle) {
+        if (warningEl) warningEl.style.display = 'block';
+        if (list) list.style.display = 'none';
+        if (countEl) countEl.innerText = '0';
+        return;
+    } else {
+        if (warningEl) warningEl.style.display = 'none';
+        if (list) list.style.display = 'block';
+    }
     
     // Mettre à jour le compteur
     if (countEl) {
@@ -937,9 +1031,7 @@ function renderFolders() {
             <div class="card" style="text-align:center; padding:40px 20px;">
                 <div style="font-size:48px; margin-bottom:20px;">📂</div>
                 <h3 style="color:var(--accent);">Aucun projet pour le moment</h3>
-                <p style="color:#94a3b8; margin:20px 0;">Créez votre premier projet ou restaurez une sauvegarde</p>
-                <button class="btn" style="background:var(--primary); max-width:300px; margin:10px auto;" onclick="newFolder()">+ CRÉER UN PROJET</button>
-                <button class="btn" style="background:var(--success); max-width:300px; margin:10px auto;" onclick="document.getElementById('import-file').click()">📥 RESTAURER UNE SAUVEGARDE</button>
+                <p style="color:#94a3b8; margin:20px 0;">Créez votre premier projet en cliquant sur le bouton "+ NOUVEAU"</p>
             </div>
         `;
         return;
@@ -1037,7 +1129,7 @@ function addComponentToProject(catId, compId) {
         data: component
     });
     
-    save();
+    saveProjectToFolder(db[currentIdx]);
     renderProjectComponents();
     closeModal('modal-component-picker');
     alert('Composant ajouté ! 💡');
@@ -1047,7 +1139,7 @@ function removeProjectComponent(idx) {
     const f = db[currentIdx];
     if (confirm('Retirer ce composant du projet ?')) {
         f.components.splice(idx, 1);
-        save();
+        saveProjectToFolder(db[currentIdx]);
         renderProjectComponents();
     }
 }
@@ -1059,10 +1151,16 @@ function viewProjectComponent(idx) {
 }
 
 function newFolder() {
+    if (!projectDirHandle) {
+        alert('⚠️ Aucun dossier configuré !\n\nVeuillez d\'abord configurer le dossier projet/ dans les paramètres.');
+        return;
+    }
+    
     let n = prompt("Nom du projet ?");
     if(n) { 
-        db.push({name:n, status:'En cours', notes:'', code:'', img:'', components:[]}); 
-        save(); 
+        const newProject = {name:n, status:'En cours', notes:'', code:'', img:'', components:[]};
+        db.push(newProject); 
+        saveProjectToFolder(newProject);
         renderFolders();
     }
 }
@@ -1070,33 +1168,18 @@ function newFolder() {
 function saveProject() {
     db[currentIdx].notes = document.getElementById('edit-notes').value;
     db[currentIdx].code = document.getElementById('edit-code').value;
-    save(); 
+    saveProjectToFolder(db[currentIdx]);
     renderFolders(); 
     closeModal('modal-project');
-    
-    // Rappel de sauvegarde tous les 3 projets
-    if (db.length > 0 && db.length % 3 === 0) {
-        const lastBackup = localStorage.getItem('lab_last_backup');
-        const now = Date.now();
-        const dayInMs = 24 * 60 * 60 * 1000;
-        
-        if (!lastBackup || (now - parseInt(lastBackup)) > dayInMs) {
-            setTimeout(() => {
-                if (confirm('💾 Vous avez ' + db.length + ' projets !\n\nSouhaitez-vous les sauvegarder maintenant ?')) {
-                    localStorage.setItem('lab_last_backup', now.toString());
-                    exportProjects();
-                } else {
-                    localStorage.setItem('lab_last_backup', now.toString());
-                }
-            }, 500);
-        }
-    }
 }
 
 function deleteFolder() {
     if(confirm('Supprimer ce projet ?')) {
+        const project = db[currentIdx];
+        deleteProjectFile(project);
         db.splice(currentIdx, 1);
-        save(); renderFolders(); closeModal('modal-project');
+        renderFolders(); 
+        closeModal('modal-project');
     }
 }
 
@@ -1108,7 +1191,7 @@ function previewFile() {
             db[currentIdx].img = e.target.result;
             document.getElementById('proj-img-preview').src = e.target.result;
             document.getElementById('proj-img-preview').style.display = 'block';
-            save();
+            saveProjectToFolder(db[currentIdx]);
         };
         reader.readAsDataURL(file);
     }
@@ -1141,7 +1224,204 @@ function envoyerCode() {
     .catch(() => alert("Erreur : ESP32 injoignable"));
 }
 
-function save() { localStorage.setItem('lab_pro_db', JSON.stringify(db)); }
+// ========================================
+// GESTION LOCALE DES PROJETS
+// ========================================
+
+// Sauvegarder le handle du dossier dans IndexedDB
+async function saveFolderHandle(handle) {
+    try {
+        const db = await openDB();
+        const tx = db.transaction('handles', 'readwrite');
+        await tx.objectStore('handles').put(handle, 'projectDir');
+        await tx.done;
+        console.log('✅ Dossier sauvegardé pour la prochaine session');
+    } catch (error) {
+        console.error('Erreur sauvegarde handle:', error);
+    }
+}
+
+// Récupérer le handle du dossier depuis IndexedDB
+async function loadFolderHandle() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            console.log('🔍 Tentative de chargement du handle depuis IndexedDB...');
+            const db = await openDB();
+            const tx = db.transaction('handles', 'readonly');
+            const request = tx.objectStore('handles').get('projectDir');
+            
+            request.onsuccess = () => {
+                const handle = request.result;
+                console.log('📦 Handle récupéré:', handle ? 'OUI' : 'NON');
+                if (handle) {
+                    console.log('📦 Handle type:', typeof handle, 'kind:', handle.kind);
+                }
+                resolve(handle);
+            };
+            
+            request.onerror = () => {
+                console.error('❌ Erreur lors de la récupération:', request.error);
+                resolve(null);
+            };
+        } catch (error) {
+            console.error('❌ Erreur chargement handle:', error);
+            resolve(null);
+        }
+    });
+}
+
+// Ouvrir la base de données IndexedDB
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('ArduinoLabDB', 1);
+        
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+        
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('handles')) {
+                db.createObjectStore('handles');
+            }
+        };
+    });
+}
+
+// Charger automatiquement les projets depuis le dossier
+async function loadProjectsFromFolder() {
+    console.log('🚀 Démarrage loadProjectsFromFolder...');
+    
+    // Vérifier si File System Access API est disponible
+    if (!('showDirectoryPicker' in window)) {
+        console.log('❌ File System Access API non disponible - utilisez Chrome ou Edge');
+        return;
+    }
+    
+    console.log('✅ File System Access API disponible');
+    
+    // Essayer de récupérer le dossier sauvegardé
+    try {
+        const savedHandle = await loadFolderHandle();
+        console.log('📁 savedHandle type:', typeof savedHandle, savedHandle);
+        
+        if (savedHandle && savedHandle.kind === 'directory') {
+            console.log('📁 Handle trouvé dans IndexedDB');
+            
+            // Vérifier si on peut accéder au dossier
+            try {
+                // Demander la permission si nécessaire
+                const permission = await savedHandle.requestPermission({ mode: 'readwrite' });
+                console.log('🔑 Permission:', permission);
+                
+                if (permission === 'granted') {
+                    projectDirHandle = savedHandle;
+                    console.log('✅ Dossier restauré depuis la session précédente');
+                    await loadAllProjects();
+                    return;
+                } else {
+                    console.log('⚠️ Permission refusée');
+                }
+            } catch (err) {
+                console.log('⚠️ Erreur accès dossier:', err.message, err);
+            }
+        } else {
+            console.log('⚠️ Pas de handle valide dans IndexedDB');
+        }
+    } catch (error) {
+        console.log('⚠️ Impossible de restaurer le dossier:', error.message, error);
+    }
+    
+    // Si pas de dossier sauvegardé ou permission refusée
+    console.log('⚠️ Aucun dossier configuré - l\'utilisateur doit sélectionner le dossier projet/');
+}
+
+// Demander l'accès au dossier projet/ (optionnel, via bouton)
+async function requestProjectFolderAccess() {
+    if (!('showDirectoryPicker' in window)) {
+        alert('❌ Votre navigateur ne supporte pas cette fonctionnalité.\n\nUtilisez Chrome ou Edge.');
+        return false;
+    }
+    
+    try {
+        projectDirHandle = await window.showDirectoryPicker({
+            mode: 'readwrite',
+            startIn: 'desktop'
+        });
+        
+        // Sauvegarder le dossier pour la prochaine session
+        await saveFolderHandle(projectDirHandle);
+        
+        await loadAllProjects();
+        renderFolders();
+        alert('✅ Dossier "projet" configuré !\n\nVos projets seront sauvegardés automatiquement dans ce dossier.\n\n💾 Le dossier sera mémorisé pour les prochaines visites.');
+        return true;
+    } catch (error) {
+        if (error.name !== 'AbortError') {
+            console.error('Erreur accès dossier:', error);
+        }
+        return false;
+    }
+}
+
+// Charger tous les projets depuis le dossier
+async function loadAllProjects() {
+    if (!projectDirHandle) return;
+    
+    db = [];
+    
+    try {
+        for await (const entry of projectDirHandle.values()) {
+            if (entry.kind === 'file' && entry.name.endsWith('.json')) {
+                const file = await entry.getFile();
+                const content = await file.text();
+                try {
+                    const project = JSON.parse(content);
+                    db.push(project);
+                } catch (e) {
+                    console.error('Erreur lecture projet:', entry.name, e);
+                }
+            }
+        }
+        console.log(`✅ ${db.length} projet(s) chargé(s) depuis le dossier`);
+    } catch (error) {
+        console.error('Erreur chargement projets:', error);
+    }
+}
+
+// Sauvegarder un projet dans le dossier
+async function saveProjectToFolder(project) {
+    // Vérifier qu'un dossier est configuré
+    if (!projectDirHandle) {
+        alert('⚠️ Aucun dossier configuré !\n\nVeuillez configurer le dossier projet/ dans les paramètres.');
+        return;
+    }
+    
+    try {
+        const fileName = project.name.replace(/[^a-z0-9]/gi, '-').toLowerCase() + '.json';
+        const fileHandle = await projectDirHandle.getFileHandle(fileName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(project, null, 2));
+        await writable.close();
+        console.log('✅ Projet sauvegardé dans le dossier:', fileName);
+    } catch (error) {
+        console.error('Erreur sauvegarde fichier:', error);
+    }
+}
+
+// Supprimer un fichier projet
+async function deleteProjectFile(project) {
+    if (!projectDirHandle) return;
+    
+    try {
+        const fileName = project.name.replace(/[^a-z0-9]/gi, '-').toLowerCase() + '.json';
+        await projectDirHandle.removeEntry(fileName);
+        console.log('✅ Projet supprimé du dossier:', fileName);
+    } catch (error) {
+        console.error('Erreur suppression fichier:', error);
+    }
+}
+
+// localStorage n'est plus utilisé - tous les projets sont sauvegardés dans le dossier projet/
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 function openModal(id) { document.getElementById(id).style.display = 'flex'; }
 
@@ -1177,41 +1457,21 @@ function copyCode() {
 
 // --- EXPORT/IMPORT DES PROJETS ---
 function exportProjects() {
-    if (db.length === 0) {
-        alert('Aucun projet à exporter !');
-        return;
-    }
-    
-    const data = {
-        version: '1.0',
-        date: new Date().toISOString(),
-        projects: db,
-        ip: localStorage.getItem('lab_ip')
-    };
-    
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `mes-projets-arduino-${new Date().toISOString().slice(0,10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    closeModal('modal-settings-menu');
-    alert(`✅ ${db.length} projet(s) sauvegardé(s) !\n\n` +
-          `📁 Fichier téléchargé avec succès.\n\n` +
-          `💡 Conseil : Conservez ce fichier dans un endroit sûr\n` +
-          `(Google Drive, Dropbox, clé USB...)`);
+    alert('⚠️ Les projets sont automatiquement sauvegardés dans le dossier projet/\n\nVous pouvez retrouver tous vos fichiers .json dans ce dossier et les synchroniser avec Git.');
 }
 
-function importProjects(event) {
+async function importProjects(event) {
     const file = event.target.files[0];
     if (!file) return;
     
+    if (!projectDirHandle) {
+        alert('⚠️ Aucun dossier configuré !\n\nVeuillez d\'abord configurer le dossier projet/ dans les paramètres.');
+        event.target.value = '';
+        return;
+    }
+    
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         try {
             const data = JSON.parse(e.target.result);
             
@@ -1227,15 +1487,19 @@ function importProjects(event) {
             if (confirm(confirmMsg)) {
                 db = data.projects;
                 
+                // Sauvegarder chaque projet dans le dossier
+                for (const project of db) {
+                    await saveProjectToFolder(project);
+                }
+                
                 // Restaurer aussi l'IP si présente
                 if (data.ip) {
                     localStorage.setItem('lab_ip', data.ip);
                 }
                 
-                save();
                 renderFolders();
                 closeModal('modal-settings-menu');
-                alert(`✅ ${db.length} projet(s) restauré(s) avec succès !`);
+                alert(`✅ ${db.length} projet(s) restauré(s) avec succès dans le dossier projet/ !`);
             }
         } catch (error) {
             console.error('Erreur import:', error);
@@ -1248,205 +1512,14 @@ function importProjects(event) {
     event.target.value = '';
 }
 
-window.onload = () => {
-    const token = document.getElementById('github-token').value.trim();
-    const username = document.getElementById('github-username').value.trim();
-    const repo = document.getElementById('github-repo').value.trim();
-    
-    if (!token || !username || !repo) {
-        alert('⚠️ Veuillez remplir tous les champs GitHub (token, username, repo)');
-        return;
-    }
-    
-    githubConfig = { token, username, repo };
-    localStorage.setItem('github_config', JSON.stringify(githubConfig));
-    
-    updateGitHubStatus('🟢 Configuré - Prêt à synchroniser');
-    alert('✅ Configuration GitHub enregistrée !\n\nVous pouvez maintenant synchroniser vos projets.');
-}
-
-function toggleAutoSync(enabled) {
-    autoSyncEnabled = enabled;
-    localStorage.setItem('github_autosync', enabled ? 'true' : 'false');
-    
-    if (enabled && !githubConfig) {
-        alert('⚠️ Veuillez d\'abord configurer GitHub avant d\'activer la synchronisation automatique.');
-        document.getElementById('auto-sync').checked = false;
-        autoSyncEnabled = false;
-        localStorage.setItem('github_autosync', 'false');
-    } else if (enabled) {
-        alert('✅ Synchronisation automatique activée !\n\nVos projets seront synchronisés après chaque modification.');
-    }
-}
-
-function updateGitHubStatus(message, color = '#94a3b8') {
-    const statusEl = document.getElementById('github-status');
-    if (statusEl) {
-        statusEl.innerHTML = message;
-        statusEl.style.color = color;
-    }
-    
-    // Mettre à jour l'indicateur dans la barre de projets
-    const indicator = document.getElementById('github-sync-indicator');
-    if (indicator) {
-        if (!githubConfig) {
-            indicator.textContent = '⚫';
-            indicator.title = 'GitHub non configuré - Cliquez pour configurer';
-        } else if (message.includes('🔄')) {
-            indicator.textContent = '🔄';
-            indicator.title = 'Synchronisation en cours...';
-        } else if (message.includes('🟢')) {
-            indicator.textContent = '🟢';
-            indicator.title = 'Synchronisé avec GitHub - ' + (autoSyncEnabled ? 'Auto-sync activé' : 'Auto-sync désactivé');
-        } else if (message.includes('🔴')) {
-            indicator.textContent = '🔴';
-            indicator.title = 'Erreur de synchronisation - Cliquez pour voir les détails';
-        }
-    }
-}
-
-async function syncWithGitHub() {
-    if (!githubConfig) {
-        alert('⚠️ Veuillez d\'abord configurer GitHub dans les paramètres.');
-        return;
-    }
-    
-    const { token, username, repo } = githubConfig;
-    const fileName = 'projects.json';
-    const apiUrl = `https://api.github.com/repos/${username}/${repo}/contents/${fileName}`;
-    
-    try {
-        updateGitHubStatus('🔄 Synchronisation en cours...', '#fbbf24');
-        
-        // 1. Récupérer le fichier existant sur GitHub (s'il existe)
-        let remoteSha = null;
-        let remoteData = null;
-        
-        try {
-            const getResponse = await fetch(apiUrl, {
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-            
-            if (getResponse.ok) {
-                const fileData = await getResponse.json();
-                remoteSha = fileData.sha;
-                const content = atob(fileData.content);
-                remoteData = JSON.parse(content);
-            }
-        } catch (err) {
-            // Fichier n'existe pas encore, c'est OK
-            console.log('Aucun fichier distant trouvé, création d\'un nouveau fichier');
-        }
-        
-        // 2. Fusionner les données locales et distantes
-        let mergedData = mergeProjects(remoteData, {
-            projects: db,
-            settings: {
-                wifi_ip: localStorage.getItem('lab_ip') || ''
-            },
-            timestamp: new Date().toISOString()
-        });
-        
-        // 3. Uploader vers GitHub
-        const content = btoa(unescape(encodeURIComponent(JSON.stringify(mergedData, null, 2))));
-        
-        const putResponse = await fetch(apiUrl, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `token ${token}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                message: `Sync projects - ${new Date().toLocaleString('fr-FR')}`,
-                content: content,
-                sha: remoteSha || undefined
-            })
-        });
-        
-        if (!putResponse.ok) {
-            const error = await putResponse.json();
-            throw new Error(error.message || 'Erreur lors de la synchronisation');
-        }
-        
-        // 4. Mettre à jour les données locales avec les données fusionnées
-        db = mergedData.projects;
-        localStorage.setItem('lab_pro_db', JSON.stringify(db));
-        if (mergedData.settings.wifi_ip) {
-            localStorage.setItem('lab_ip', mergedData.settings.wifi_ip);
-        }
-        
-        renderFolders();
-        updateGitHubStatus('🟢 Synchronisé - ' + new Date().toLocaleTimeString('fr-FR'), '#22c55e');
-        
-        alert('✅ Synchronisation réussie !\n\n' +
-              `📁 ${mergedData.projects.length} projet(s) synchronisé(s)\n` +
-              `🕒 ${new Date().toLocaleString('fr-FR')}`);
-        
-    } catch (error) {
-        console.error('Erreur de synchronisation:', error);
-        updateGitHubStatus('🔴 Erreur de synchronisation', '#ef4444');
-        alert('❌ Erreur de synchronisation GitHub :\n\n' + error.message + '\n\n' +
-              'Vérifiez :\n' +
-              '• Votre token GitHub\n' +
-              '• Le nom d\'utilisateur et du dépôt\n' +
-              '• Que le dépôt existe\n' +
-              '• Que le token a les permissions "repo"');
-    }
-}
-
-function mergeProjects(remote, local) {
-    // Si pas de données distantes, utiliser les locales
-    if (!remote || !remote.projects) {
-        return local;
-    }
-    
-    // Si pas de données locales, utiliser les distantes
-    if (!local || !local.projects || local.projects.length === 0) {
-        return remote;
-    }
-    
-    // Fusionner : garder les projets les plus récents et ajouter les nouveaux
-    const merged = { ...local };
-    const localMap = new Map(local.projects.map(p => [p.title, p]));
-    
-    for (const remoteProject of remote.projects) {
-        const localProject = localMap.get(remoteProject.title);
-        
-        if (!localProject) {
-            // Projet existe seulement sur GitHub, l'ajouter
-            merged.projects.push(remoteProject);
-        }
-        // Si le projet existe des deux côtés, garder la version locale (last-write-wins)
-    }
-    
-    // Mettre à jour le timestamp
-    merged.timestamp = new Date().toISOString();
-    
-    return merged;
-}
-
-window.onload = () => {
+window.onload = async () => {
     let ip = localStorage.getItem('lab_ip');
     if(ip) document.getElementById('home-status').innerText = "IP: " + ip;
+    
+    // Charger les projets
+    await loadProjectsFromFolder();
+    
     renderFolders();
-    
-    // Charger la configuration GitHub
-    if (githubConfig) {
-        document.getElementById('github-token').value = githubConfig.token;
-        document.getElementById('github-username').value = githubConfig.username;
-        document.getElementById('github-repo').value = githubConfig.repo;
-        updateGitHubStatus('🟢 Configuré - Prêt à synchroniser', '#22c55e');
-    } else {
-        updateGitHubStatus('⚫ Non configuré');
-    }
-    
-    if (autoSyncEnabled) {
-        document.getElementById('auto-sync').checked = true;
-    }
     
     // Message de bienvenue au premier lancement
     const firstVisit = !localStorage.getItem('lab_visited');
@@ -1454,9 +1527,8 @@ window.onload = () => {
         localStorage.setItem('lab_visited', 'true');
         setTimeout(() => {
             alert('👋 Bienvenue sur ESP32 Lab Pro !\n\n' +
-                  '💡 Vos projets sont sauvegardés localement dans votre navigateur.\n\n' +
-                  '💾 Pensez à exporter régulièrement vos projets\n' +
-                  '(Menu ⚙️ → Sauvegarder les projets)\n\n' +
+                  '📁 Tes projets sont sauvegardés localement\n\n' +
+                  '💡 Crée, modifie et gère tes projets Arduino !\n\n' +
                   'Bon travail ! 🚀');
         }, 1000);
     }

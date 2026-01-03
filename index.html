@@ -157,6 +157,22 @@
                 <button onclick="newFolder()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:bold;">+ NOUVEAU</button>
             </div>
         </div>
+        
+        <!-- Message si dossier non configuré -->
+        <div id="no-folder-warning" style="display:none; margin:20px; padding:20px; background:#1e293b; border-left:4px solid #ef4444; border-radius:10px;">
+            <h3 style="margin:0 0 10px 0; color:#ef4444;">⚠️ Aucun dossier sélectionné</h3>
+            <p style="margin:0 0 10px 0; line-height:1.6;">Pour sauvegarder vos projets, vous devez configurer le dossier "projet".</p>
+            <p style="margin:0 0 15px 0; font-size:13px; color:#94a3b8; line-height:1.6;">
+                📁 <b>Emplacement du dossier :</b><br>
+                <code style="background:#0f172a; padding:4px 8px; border-radius:4px; display:inline-block; margin-top:5px;">
+                    votre-repo-github/projet/
+                </code>
+            </p>
+            <button onclick="requestProjectFolderAccess()" class="btn" style="background:var(--primary); padding:12px 20px; margin:0;">
+                📁 Configurer le dossier projet
+            </button>
+        </div>
+        
         <div id="folder-list" style="margin-top:15px;"></div>
     </div>
 
@@ -189,6 +205,11 @@
     <div id="modal-settings-menu" class="modal">
         <div class="modal-header"><h3>Paramètres</h3><button onclick="closeModal('modal-settings-menu')" style="background:none; border:none; color:white; font-size:20px;">✕</button></div>
         <div style="padding: 20px;">
+            <div class="menu-option" onclick="requestProjectFolderAccess();">
+                <span style="font-size:24px;">📁</span>
+                <div><b>Sync dossier projet/</b><br><small style="color:#94a3b8;">Optionnel - Chrome/Edge uniquement</small></div>
+            </div>
+            
             <div class="menu-option" onclick="closeModal('modal-settings-menu'); openModal('modal-wifi');">
                 <span style="font-size:24px;">📡</span>
                 <div><b>Configuration WiFi</b><br><small style="color:#94a3b8;">IP de l'ESP32</small></div>
@@ -198,31 +219,6 @@
                 <span style="font-size:24px;">⚙️</span>
                 <div><b>Paramètres avancés</b><br><small style="color:#94a3b8;">Personnalisation</small></div>
             </div>
-        </div>
-    </div>
-
-    <!-- Modale Sauvegardes -->
-    <div id="modal-backup" class="modal">
-        <div class="modal-header">
-            <button onclick="openModal('modal-settings-menu'); closeModal('modal-backup');" style="background:none; border:none; color:white;">←</button>
-            <h3>Sauvegardes</h3>
-            <button onclick="closeModal('modal-backup')" style="background:none; border:none; color:white; font-size:20px;">✕</button>
-        </div>
-        <div style="padding: 20px;">
-            <div class="card" style="background:#1e3a5f; border-left:3px solid var(--accent); margin-bottom:15px; padding:15px;">
-                <p style="font-size:12px; margin:0; line-height:1.6;">💡 <b>Important :</b> Vos projets sont sauvegardés localement. Exportez-les régulièrement pour ne pas les perdre !</p>
-            </div>
-            
-            <div class="menu-option" onclick="exportProjects()">
-                <span style="font-size:24px;">💾</span>
-                <div><b>Exporter les projets</b><br><small style="color:#94a3b8;">Sauvegarder dans un fichier</small></div>
-            </div>
-            
-            <div class="menu-option" onclick="document.getElementById('import-file').click()">
-                <span style="font-size:24px;">📥</span>
-                <div><b>Importer les projets</b><br><small style="color:#94a3b8;">Restaurer depuis un fichier</small></div>
-            </div>
-            <input type="file" id="import-file" accept=".json" style="display:none" onchange="importProjects(event)">
         </div>
     </div>
 
