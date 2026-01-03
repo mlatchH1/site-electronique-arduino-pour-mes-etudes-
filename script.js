@@ -1,7 +1,5 @@
 let db = JSON.parse(localStorage.getItem('lab_pro_db')) || [];
 let currentIdx = null;
-let githubConfig = JSON.parse(localStorage.getItem('github_config')) || null;
-let autoSyncEnabled = localStorage.getItem('github_autosync') === 'true';
 
 // --- BASE DE DONNÉES DES CARTES ARDUINO ---
 const arduinoBoards = [
@@ -1066,11 +1064,6 @@ function newFolder() {
         db.push({name:n, status:'En cours', notes:'', code:'', img:'', components:[]}); 
         save(); 
         renderFolders();
-        
-        // Synchronisation automatique GitHub si activée
-        if (autoSyncEnabled && githubConfig) {
-            setTimeout(() => syncWithGitHub(), 500);
-        }
     }
 }
 
@@ -1080,11 +1073,6 @@ function saveProject() {
     save(); 
     renderFolders(); 
     closeModal('modal-project');
-    
-    // Synchronisation automatique GitHub si activée
-    if (autoSyncEnabled && githubConfig) {
-        setTimeout(() => syncWithGitHub(), 500);
-    }
     
     // Rappel de sauvegarde tous les 3 projets
     if (db.length > 0 && db.length % 3 === 0) {
@@ -1109,11 +1097,6 @@ function deleteFolder() {
     if(confirm('Supprimer ce projet ?')) {
         db.splice(currentIdx, 1);
         save(); renderFolders(); closeModal('modal-project');
-        
-        // Synchronisation automatique GitHub si activée
-        if (autoSyncEnabled && githubConfig) {
-            setTimeout(() => syncWithGitHub(), 500);
-        }
     }
 }
 
@@ -1265,11 +1248,7 @@ function importProjects(event) {
     event.target.value = '';
 }
 
-// ========================================
-// GITHUB SYNCHRONIZATION
-// ========================================
-
-function saveGitHubConfig() {
+window.onload = () => {
     const token = document.getElementById('github-token').value.trim();
     const username = document.getElementById('github-username').value.trim();
     const repo = document.getElementById('github-repo').value.trim();
