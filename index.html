@@ -82,7 +82,7 @@
         .modal-header { padding: 15px 20px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; background: var(--card); }
         
         .code-editor { background: #000; color: #22c55e; font-family: 'Courier New', monospace; height: 250px; border: 1px solid var(--primary); padding: 12px; font-size: 12px; line-height: 1.4;}
-        .img-preview { width: 100%; height: 180px; border-radius: 15px; object-fit: cover; margin-bottom: 15px; background: #000; border: 1px solid #334155;}
+        .img-preview { width: 100%; height: 180px; border-radius: 15px; object-fit: cover; margin-bottom: 15px; background: transparent; border: 1px solid #334155;}
 
         .formula-item {
             background: var(--card); padding: 18px; border-radius: 15px;
@@ -118,18 +118,46 @@
 
     <div id="view-home" class="view active-view">
         <div class="app-bar"><h2>ESP32 <span style="color:var(--primary)">Lab</span></h2><button onclick="openModal('modal-settings-menu')" style="background:none; border:none; font-size:24px;">📶</button></div>
-        <div class="card" style="margin-top:20px;">
+        <!-- Panneau de contrôle désactivé temporairement -->
+        <!-- <div class="card" style="margin-top:20px;">
             <h3>🕹️ Contrôle Direct</h3>
             <p id="home-status" style="font-size:13px; color:var(--accent);">IP: Non configurée</p>
             <div style="display:flex; gap:10px;">
                 <button class="btn" style="background:var(--success)" onclick="sendCmd('led?status=ON')">ALLUMER</button>
                 <button class="btn" style="background:var(--danger)" onclick="sendCmd('led?status=OFF')">ÉTEINDRE</button>
             </div>
+        </div> -->
+        
+        <div style="margin-top:20px;">
+            <div class="menu-option" onclick="switchView('view-boards')">
+                <span style="font-size:32px;">🎛️</span>
+                <div style="flex:1">
+                    <b style="font-size:18px;">Cartes Arduino</b><br>
+                    <small style="color:#94a3b8;">Uno, Nano ESP32 et plus</small>
+                </div>
+                <span style="font-size:20px;">→</span>
+            </div>
+            
+            <div class="menu-option" onclick="switchView('view-components')">
+                <span style="font-size:32px;">⚡</span>
+                <div style="flex:1">
+                    <b style="font-size:18px;">Composants</b><br>
+                    <small style="color:#94a3b8;">LED, résistances, condensateurs...</small>
+                </div>
+                <span style="font-size:20px;">→</span>
+            </div>
         </div>
     </div>
 
     <div id="view-folders" class="view">
-        <div class="app-bar"><h2>Projets</h2><button onclick="newFolder()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:bold;">+ NOUVEAU</button></div>
+        <div class="app-bar">
+            <h2>Projets</h2>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <span id="github-sync-indicator" style="font-size:18px; cursor:pointer;" onclick="openModal('modal-settings-menu')" title="Cliquez pour configurer GitHub">⚫</span>
+                <span id="project-count" style="font-size:12px; color:var(--accent); font-weight:bold;">0</span>
+                <button onclick="newFolder()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:bold;">+ NOUVEAU</button>
+            </div>
+        </div>
         <div id="folder-list" style="margin-top:15px;"></div>
     </div>
 
@@ -138,19 +166,77 @@
         <div id="formula-list" style="margin-top:15px; padding-bottom: 100px;"></div>
     </div>
 
+    <!-- Vue Cartes Arduino -->
+    <div id="view-boards" class="view">
+        <div class="app-bar">
+            <button onclick="switchView('view-home')" style="background:none; border:none; color:var(--primary); font-weight:bold;">← Retour</button>
+            <h2>Cartes Arduino</h2>
+            <div style="width:60px"></div>
+        </div>
+        <div id="board-list" style="margin-top:15px; padding-bottom: 100px;"></div>
+    </div>
+
+    <!-- Vue Composants -->
+    <div id="view-components" class="view">
+        <div class="app-bar">
+            <button onclick="switchView('view-home')" style="background:none; border:none; color:var(--primary); font-weight:bold;">← Retour</button>
+            <h2>Composants</h2>
+            <div style="width:60px"></div>
+        </div>
+        <div id="component-categories" style="margin-top:15px; padding-bottom: 100px;"></div>
+    </div>
+
     <div id="modal-settings-menu" class="modal">
         <div class="modal-header"><h3>Options</h3><button onclick="closeModal('modal-settings-menu')" style="background:none; border:none; color:white; font-size:20px;">✕</button></div>
         <div style="padding: 20px;">
+            <div class="card" style="background:#1e3a5f; border-left:3px solid var(--accent); margin-bottom:15px; padding:15px;">
+                <p style="font-size:12px; margin:0; line-height:1.6;">💡 <b>Important :</b> Vos projets sont sauvegardés localement. Exportez-les régulièrement pour ne pas les perdre !</p>
+            </div>
+            
+            <!-- GitHub Sync Section -->
+            <div class="card" style="margin-bottom:15px;">
+                <h4 style="margin:0 0 15px 0; display:flex; align-items:center; gap:8px;">🔄 Synchronisation GitHub</h4>
+                <div id="github-status" style="padding:10px; border-radius:8px; margin-bottom:12px; background:#0f172a; text-align:center; font-size:12px;">
+                    ⚫ Non configuré
+                </div>
+                <label style="font-size:12px; color:#94a3b8;">Token GitHub (Personal Access Token)</label>
+                <input type="password" id="github-token" placeholder="ghp_..." style="font-size:12px; margin-bottom:10px;">
+                <label style="font-size:12px; color:#94a3b8;">Nom d'utilisateur GitHub</label>
+                <input type="text" id="github-username" placeholder="votre-username" style="font-size:12px; margin-bottom:10px;">
+                <label style="font-size:12px; color:#94a3b8;">Nom du dépôt</label>
+                <input type="text" id="github-repo" placeholder="mon-repo-arduino" style="font-size:12px; margin-bottom:10px;">
+                <button class="btn" style="background:var(--primary); padding:10px; font-size:13px;" onclick="saveGitHubConfig()">💾 Enregistrer Config</button>
+                <button class="btn" style="background:var(--success); padding:10px; font-size:13px;" onclick="syncWithGitHub()" id="sync-btn">🔄 Synchroniser maintenant</button>
+                <label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12px;">
+                    <input type="checkbox" id="auto-sync" onchange="toggleAutoSync(this.checked)" style="width:auto; margin:0;">
+                    <span>Synchroniser automatiquement après chaque modification</span>
+                </label>
+                <p style="font-size:11px; color:#64748b; margin:12px 0 0 0; line-height:1.5;">
+                    ℹ️ Pour créer un token : GitHub → Settings → Developer settings → Personal access tokens → Generate new token (classic) → Cocher "repo" → Generate
+                </p>
+            </div>
+            
             <div class="menu-option" onclick="closeModal('modal-settings-menu'); openModal('modal-wifi');">
                 <span style="font-size:24px;">⚙️</span>
                 <div><b>Configuration WiFi</b><br><small style="color:#94a3b8;">IP de l'ESP32</small></div>
             </div>
+            
+            <div class="menu-option" onclick="exportProjects()">
+                <span style="font-size:24px;">💾</span>
+                <div><b>Sauvegarder les projets</b><br><small style="color:#94a3b8;">Exporter dans un fichier</small></div>
+            </div>
+            
+            <div class="menu-option" onclick="document.getElementById('import-file').click()">
+                <span style="font-size:24px;">📥</span>
+                <div><b>Restaurer les projets</b><br><small style="color:#94a3b8;">Importer depuis un fichier</small></div>
+            </div>
+            <input type="file" id="import-file" accept=".json" style="display:none" onchange="importProjects(event)">
         </div>
     </div>
 
     <div id="modal-wifi" class="modal">
         <div class="modal-header"><button onclick="openModal('modal-settings-menu'); closeModal('modal-wifi');" style="background:none; border:none; color:white;">←</button><h3>Réseau</h3><button onclick="closeModal('modal-wifi')">✕</button></div>
-        <div style="padding: 20px;">
+        <div style="padding: 20px; overflow-y: auto; flex: 1;">
             <label>IP de l'ESP32</label>
             <input type="text" id="ip-input" placeholder="Ex: 192.168.1.50">
             <button class="btn" style="background:var(--primary)" onclick="saveWifi()">SAUVEGARDER</button>
@@ -264,6 +350,10 @@ void executeCommand(String cmd) {
             <label for="img-upload" style="background:#334155; color:white; padding:12px; border-radius:10px; display:block; text-align:center; cursor:pointer; margin-bottom:20px;">📸 Photo du projet</label>
             <input type="file" id="img-upload" accept="image/*" style="display:none" onchange="previewFile()">
             
+            <label style="color:var(--accent); font-size:11px; font-weight:bold;">COMPOSANTS UTILISÉS</label>
+            <div id="project-components" style="margin-bottom:15px;"></div>
+            <button class="btn" style="background:var(--accent); margin-bottom:20px;" onclick="openComponentPicker()">+ AJOUTER UN COMPOSANT</button>
+            
             <label style="color:var(--accent); font-size:11px; font-weight:bold;">NOTES (PINOUT, SCHÉMA)</label>
             <textarea id="edit-notes" rows="4" placeholder="Notes..."></textarea>
             
@@ -276,11 +366,20 @@ void executeCommand(String cmd) {
 
 Mode IDE : code complet avec setup/loop pour copier-coller dans l'IDE.
 Mode WiFi : commandes simples pour exécution distante (ex: led 13 on, delay 1000)."></textarea>
-            <button class="btn" style="background:#22c55e; margin-top:10px;" id="btn-copy" onclick="copyCode()">📋 COPIER LE CODE</button>
-            <button class="btn" style="background:var(--primary); margin-top:10px;" id="btn-execute" onclick="envoyerCode()" style="display:none;">📤 EXÉCUTER VIA WIFI</button>
-            <button id="btn-done" class="btn" onclick="toggleStatus()"></button>
+            <button class="btn" style="background:#22c55e; margin-top:10px; display:inline-block;" id="btn-copy" onclick="copyCode()">📋 COPIER LE CODE</button>
+            <button class="btn" style="background:var(--primary); margin-top:10px; display:none;" id="btn-execute" onclick="envoyerCode()">📤 EXÉCUTER VIA WIFI</button>
             <button class="btn" style="background:none; color:var(--danger); border:1px solid var(--danger);" onclick="deleteFolder()">SUPPRIMER LE PROJET</button>
         </div>
+    </div>
+
+    <!-- Modale Sélecteur de Composants -->
+    <div id="modal-component-picker" class="modal">
+        <div class="modal-header">
+            <button onclick="closeModal('modal-component-picker')" style="color:var(--primary); background:none; border:none;">← Retour</button>
+            <h3>Ajouter un composant</h3>
+            <div style="width:60px"></div>
+        </div>
+        <div id="component-picker-content" style="padding: 20px; overflow-y: auto; flex: 1;"></div>
     </div>
 
     <div id="modal-calc" class="modal">
@@ -294,10 +393,40 @@ Mode WiFi : commandes simples pour exécution distante (ex: led 13 on, delay 100
         </div>
     </div>
 
+    <!-- Modale Détails Carte Arduino -->
+    <div id="modal-board-detail" class="modal">
+        <div class="modal-header">
+            <button onclick="closeModal('modal-board-detail')" style="color:var(--primary); background:none; border:none;">← Retour</button>
+            <h3 id="board-detail-title">Carte</h3>
+            <div style="width:60px"></div>
+        </div>
+        <div id="board-detail-content" style="padding: 20px; overflow-y: auto; flex: 1;"></div>
+    </div>
+
+    <!-- Modale Détails Composant -->
+    <div id="modal-component-detail" class="modal">
+        <div class="modal-header">
+            <button onclick="closeModal('modal-component-detail')" style="color:var(--primary); background:none; border:none;">← Retour</button>
+            <h3 id="component-detail-title">Composant</h3>
+            <div style="width:60px"></div>
+        </div>
+        <div id="component-detail-content" style="padding: 20px; overflow-y: auto; flex: 1;"></div>
+    </div>
+
+    <!-- Modale Liste Composants d'une catégorie -->
+    <div id="modal-component-list" class="modal">
+        <div class="modal-header">
+            <button onclick="closeModal('modal-component-list')" style="color:var(--primary); background:none; border:none;">← Retour</button>
+            <h3 id="component-list-title">Composants</h3>
+            <div style="width:60px"></div>
+        </div>
+        <div id="component-list-content" style="padding: 20px; overflow-y: auto; flex: 1;"></div>
+    </div>
+
     <nav class="bottom-nav">
-        <button class="nav-btn active" id="nav-home" onclick="switchView('view-home')"><span class="nav-icon">🏠</span>Accueil</button>
-        <button class="nav-btn" id="nav-folders" onclick="switchView('view-folders')"><span class="nav-icon">📂</span>Projets</button>
-        <button class="nav-btn" id="nav-tools" onclick="switchView('view-tools')"><span class="nav-icon">🧮</span>Outils</button>
+        <button class="nav-btn active" id="nav-home" onclick="switchView('view-home')"><span class="nav-icon">🏠</span>Home</button>
+        <button class="nav-btn" id="nav-folders" onclick="switchView('view-folders')"><span class="nav-icon">📂</span>Projects</button>
+        <button class="nav-btn" id="nav-tools" onclick="switchView('view-tools')"><span class="nav-icon">🧮</span>Formula</button>
     </nav>
 
     <script src="script.js"></script>
