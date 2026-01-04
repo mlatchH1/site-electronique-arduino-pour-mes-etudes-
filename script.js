@@ -81,9 +81,9 @@ const componentCategories = [
                 description: 'LED standard rouge, la plus courante dans les projets électroniques. Tension de seuil typique de 2V.',
                 usage: 'Utilisée comme indicateur d\'état, alarme visuelle, décoration. Toujours utiliser avec une résistance de limitation de courant.',
                 pinout: 'Anode (+) : patte longue\nCathode (-) : patte courte, côté plat',
-                pinoutImage: 'images/pinouts/led-rouge.png',
+                pinoutFolder: 'images/composants/led-rouge/brochage',
                 footprint: 'Espacement des pattes: 2.54mm (0.1")\nDiamètre du corps: 5mm\nHauteur totale: ~8.5mm',
-                footprintImage: 'images/pinouts/led-rouge-footprint.png',
+                footprintFolder: 'images/composants/led-rouge/empatement',
                 formula: 'R = (Vcc - Vled) / I',
                 calculator: {
                     inputs: [{id: 'vcc', label: 'Tension source (V)', default: 5}, {id: 'vled', label: 'Tension LED (V)', default: 2}, {id: 'iled', label: 'Courant LED (mA)', default: 20}],
@@ -99,9 +99,9 @@ const componentCategories = [
                 description: 'LED tricolore permettant de créer toutes les couleurs en mélangeant rouge, vert et bleu.',
                 usage: 'Éclairage RGB, indicateurs multicolores, ambiance lumineuse. Nécessite 3 résistances (une par couleur) et 4 fils.',
                 pinout: 'Cathode commune (GND) : 2e patte (la plus longue)\nRouge : 1ère patte\nVert : 3e patte\nBleu : 4e patte',
-                pinoutImage: 'images/pinouts/led-rgb.png',
+                pinoutFolder: 'images/composants/led-rgb/brochage',
                 footprint: 'Espacement des pattes: 2.54mm (0.1")\nConfiguration: 4 pattes en ligne\nDiamètre du corps: 5mm',
-                footprintImage: 'images/pinouts/led-rgb-footprint.png',
+                footprintFolder: 'images/composants/led-rgb/empatement',
                 formula: 'R(rouge) = (Vcc - 2V) / 0.02A\nR(vert) = (Vcc - 3.2V) / 0.02A\nR(bleu) = (Vcc - 3.2V) / 0.02A'
             }
         ]
@@ -157,6 +157,9 @@ const componentCategories = [
                 description: 'Grand condensateur pour filtrage et réservoir d\'énergie. ATTENTION : polarisé !',
                 usage: 'Filtrage alimentation, réservoir d\'énergie, lissage tension. Respecter la polarité : + vers VCC, - vers GND.',
                 pinout: 'Patte longue : + (positif)\nPatte courte : - (négatif, souvent marqué par une bande)',
+                pinoutFolder: 'images/composants/condensateur-1000uf/brochage',
+                footprint: 'Diamètre: 6.3-8mm\nEspacement des pattes: 2.5mm\nHauteur: 11-13mm',
+                footprintFolder: 'images/composants/condensateur-1000uf/empatement',
                 formula: 'Énergie stockée: E = 0.5 × C × V² = 0.5 × 0.001 × 16² = 0.128 J'
             }
         ]
@@ -176,6 +179,9 @@ const componentCategories = [
                 description: 'Capteur numérique de température et humidité, très populaire et bon marché.',
                 usage: 'Station météo, monitoring environnemental, régulation climatique. Nécessite la bibliothèque DHT.',
                 pinout: 'VCC : 3.3V ou 5V\nDATA : broche numérique (avec pull-up 10kΩ)\nGND : masse',
+                pinoutFolder: 'images/composants/dht11/brochage',
+                footprint: 'Module: 15.5 × 12 × 5.5mm\nEspacement des pattes: 2.54mm',
+                footprintFolder: 'images/composants/dht11/empatement',
                 code: '#include <DHT.h>\nDHT dht(PIN, DHT11);\nvoid setup() { dht.begin(); }\nfloat t = dht.readTemperature();\nfloat h = dht.readHumidity();'
             },
             {
@@ -187,6 +193,9 @@ const componentCategories = [
                 description: 'Capteur de distance à ultrasons très précis et abordable.',
                 usage: 'Mesure de distance, détection d\'obstacles, robot autonome, stationnement.',
                 pinout: 'VCC : 5V\nTrig : broche numérique (envoi impulsion)\nEcho : broche numérique (réception)\nGND : masse',
+                pinoutFolder: 'images/composants/hc-sr04/brochage',
+                footprint: 'Module: 45 × 20 × 15mm\nCapteurs espacés de 26mm',
+                footprintFolder: 'images/composants/hc-sr04/empatement',
                 code: 'digitalWrite(trig, HIGH);\ndelayMicroseconds(10);\ndigitalWrite(trig, LOW);\nlong duration = pulseIn(echo, HIGH);\nint distance = duration * 0.034 / 2;'
             }
         ]
@@ -206,6 +215,9 @@ const componentCategories = [
                 description: 'Petit servomoteur très populaire, précis et abordable pour les projets Arduino.',
                 usage: 'Robotique, bras articulé, volet motorisé, direction RC. Signal PWM 50Hz (20ms), impulsions 1-2ms.',
                 pinout: 'Marron/Noir : GND\nRouge : VCC (5V externe recommandé)\nOrange/Jaune : Signal PWM',
+                pinoutFolder: 'images/composants/servo-sg90/brochage',
+                footprint: 'Corps: 22.5 × 12 × 29mm\nFixes: 32mm entre trous de montage',
+                footprintFolder: 'images/composants/servo-sg90/empatement',
                 code: '#include <Servo.h>\nServo servo;\nvoid setup() { servo.attach(9); }\nservo.write(90); // Position 90°'
             },
             {
@@ -216,6 +228,9 @@ const componentCategories = [
                 description: 'Relais électromécanique permettant de contrôler des charges AC/DC puissantes.',
                 usage: 'Domotique, contrôle de lampes 220V, moteurs puissants, électrovannes. DANGER : 220V !',
                 pinout: 'VCC : 5V\nGND : masse\nIN : signal de commande (LOW = activé)\nCOM, NO, NC : contacts de puissance',
+                pinoutFolder: 'images/composants/relais-5v/brochage',
+                footprint: 'Module: 50 × 26 × 18mm\nBorniers à vis pour haute tension',
+                footprintFolder: 'images/composants/relais-5v/empatement',
                 warning: '⚠️ ATTENTION : Manipuler avec précaution, risque électrique 220V AC !'
             }
         ]
@@ -234,6 +249,9 @@ const componentCategories = [
                 description: 'Registre à décalage permettant d\'étendre les sorties numériques avec seulement 3 broches.',
                 usage: 'Multiplexage LED, afficheurs 7 segments, expansion GPIO. Cascadable.',
                 pinout: 'DS (14) : données série\nSHCP (11) : horloge shift\nSTCP (12) : horloge stockage (latch)\nQ0-Q7 : sorties parallèles',
+                pinoutFolder: 'images/composants/74hc595/brochage',
+                footprint: 'Boîtier DIP-16\nEspacement des pattes: 2.54mm\nLargeur: 7.62mm',
+                footprintFolder: 'images/composants/74hc595/empatement',
                 code: 'shiftOut(dataPin, clockPin, MSBFIRST, value);\ndigitalWrite(latchPin, HIGH);'
             }
         ]
@@ -1455,62 +1473,9 @@ function copyCode() {
     alert('Code copié dans le presse-papiers ! Collez-le dans l\'IDE Arduino.');
 }
 
-// --- EXPORT/IMPORT DES PROJETS ---
-function exportProjects() {
-    alert('⚠️ Les projets sont automatiquement sauvegardés dans le dossier projet/\n\nVous pouvez retrouver tous vos fichiers .json dans ce dossier et les synchroniser avec Git.');
-}
-
-async function importProjects(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    if (!projectDirHandle) {
-        alert('⚠️ Aucun dossier configuré !\n\nVeuillez d\'abord configurer le dossier projet/ dans les paramètres.');
-        event.target.value = '';
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const data = JSON.parse(e.target.result);
-            
-            if (!data.projects || !Array.isArray(data.projects)) {
-                alert('❌ Fichier invalide !');
-                return;
-            }
-            
-            const confirmMsg = `Voulez-vous restaurer ${data.projects.length} projet(s) ?\n\n` +
-                `Date de sauvegarde: ${data.date ? new Date(data.date).toLocaleString('fr-FR') : 'Inconnue'}\n\n` +
-                `⚠️ Cela remplacera tous vos projets actuels (${db.length} projet(s)).`;
-            
-            if (confirm(confirmMsg)) {
-                db = data.projects;
-                
-                // Sauvegarder chaque projet dans le dossier
-                for (const project of db) {
-                    await saveProjectToFolder(project);
-                }
-                
-                // Restaurer aussi l'IP si présente
-                if (data.ip) {
-                    localStorage.setItem('lab_ip', data.ip);
-                }
-                
-                renderFolders();
-                closeModal('modal-settings-menu');
-                alert(`✅ ${db.length} projet(s) restauré(s) avec succès dans le dossier projet/ !`);
-            }
-        } catch (error) {
-            console.error('Erreur import:', error);
-            alert('❌ Erreur lors de l\'import du fichier !\n\nVérifiez que le fichier est correct.');
-        }
-    };
-    reader.readAsText(file);
-    
-    // Reset input pour permettre de réimporter le même fichier
-    event.target.value = '';
-}
+// ========================================
+// INITIALISATION AU CHARGEMENT
+// ========================================
 
 window.onload = async () => {
     let ip = localStorage.getItem('lab_ip');
