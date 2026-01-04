@@ -2,6 +2,110 @@ let db = [];
 let currentIdx = null;
 let projectDirHandle = null; // Handle vers le dossier "projet" (obligatoire pour sauvegarder)
 
+// --- MODALES PERSONNALISÉES ---
+function customAlert(message, title = 'Information') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('custom-confirm-modal');
+        const titleEl = document.getElementById('custom-confirm-title');
+        const messageEl = document.getElementById('custom-confirm-message');
+        const okBtn = document.getElementById('custom-confirm-ok');
+        const cancelBtn = document.getElementById('custom-confirm-cancel');
+        
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        cancelBtn.style.display = 'none'; // Cacher le bouton Annuler
+        okBtn.textContent = 'OK';
+        okBtn.style.background = 'var(--primary)';
+        modal.style.display = 'flex';
+        
+        const handleOk = () => {
+            modal.style.display = 'none';
+            cancelBtn.style.display = 'block'; // Réafficher pour les prochains confirm
+            okBtn.textContent = 'Confirmer';
+            okBtn.style.background = 'var(--danger)';
+            okBtn.removeEventListener('click', handleOk);
+            resolve(true);
+        };
+        
+        okBtn.addEventListener('click', handleOk);
+    });
+}
+
+function customConfirm(message, title = 'Confirmation') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('custom-confirm-modal');
+        const titleEl = document.getElementById('custom-confirm-title');
+        const messageEl = document.getElementById('custom-confirm-message');
+        const okBtn = document.getElementById('custom-confirm-ok');
+        const cancelBtn = document.getElementById('custom-confirm-cancel');
+        
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        modal.style.display = 'flex';
+        
+        const handleOk = () => {
+            modal.style.display = 'none';
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            resolve(true);
+        };
+        
+        const handleCancel = () => {
+            modal.style.display = 'none';
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            resolve(false);
+        };
+        
+        okBtn.addEventListener('click', handleOk);
+        cancelBtn.addEventListener('click', handleCancel);
+    });
+}
+
+function customPrompt(message, defaultValue = '', title = 'Saisie') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('custom-prompt-modal');
+        const titleEl = document.getElementById('custom-prompt-title');
+        const messageEl = document.getElementById('custom-prompt-message');
+        const inputEl = document.getElementById('custom-prompt-input');
+        const okBtn = document.getElementById('custom-prompt-ok');
+        const cancelBtn = document.getElementById('custom-prompt-cancel');
+        
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        inputEl.value = defaultValue;
+        modal.style.display = 'flex';
+        inputEl.focus();
+        inputEl.select();
+        
+        const handleOk = () => {
+            const value = inputEl.value;
+            modal.style.display = 'none';
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            inputEl.removeEventListener('keypress', handleKeypress);
+            resolve(value || null);
+        };
+        
+        const handleCancel = () => {
+            modal.style.display = 'none';
+            okBtn.removeEventListener('click', handleOk);
+            cancelBtn.removeEventListener('click', handleCancel);
+            inputEl.removeEventListener('keypress', handleKeypress);
+            resolve(null);
+        };
+        
+        const handleKeypress = (e) => {
+            if (e.key === 'Enter') handleOk();
+            if (e.key === 'Escape') handleCancel();
+        };
+        
+        okBtn.addEventListener('click', handleOk);
+        cancelBtn.addEventListener('click', handleCancel);
+        inputEl.addEventListener('keypress', handleKeypress);
+    });
+}
+
 // --- BASE DE DONNÉES DES CARTES ARDUINO ---
 const arduinoBoards = [
     {
@@ -81,9 +185,9 @@ const componentCategories = [
                 description: 'LED standard rouge, la plus courante dans les projets électroniques. Tension de seuil typique de 2V.',
                 usage: 'Utilisée comme indicateur d\'état, alarme visuelle, décoration. Toujours utiliser avec une résistance de limitation de courant.',
                 pinout: 'Anode (+) : patte longue\nCathode (-) : patte courte, côté plat',
-                pinoutFolder: 'images/composants/led-rouge/brochage',
+                pinoutFolder: 'images/composants/LED/led-red/brochage',
                 footprint: 'Espacement des pattes: 2.54mm (0.1")\nDiamètre du corps: 5mm\nHauteur totale: ~8.5mm',
-                footprintFolder: 'images/composants/led-rouge/empatement',
+                footprintFolder: 'images/composants/LED/led-red/empatement',
                 formula: 'R = (Vcc - Vled) / I',
                 calculator: {
                     inputs: [{id: 'vcc', label: 'Tension source (V)', default: 5}, {id: 'vled', label: 'Tension LED (V)', default: 2}, {id: 'iled', label: 'Courant LED (mA)', default: 20}],
@@ -99,9 +203,9 @@ const componentCategories = [
                 description: 'LED tricolore permettant de créer toutes les couleurs en mélangeant rouge, vert et bleu.',
                 usage: 'Éclairage RGB, indicateurs multicolores, ambiance lumineuse. Nécessite 3 résistances (une par couleur) et 4 fils.',
                 pinout: 'Cathode commune (GND) : 2e patte (la plus longue)\nRouge : 1ère patte\nVert : 3e patte\nBleu : 4e patte',
-                pinoutFolder: 'images/composants/led-rgb/brochage',
+                pinoutFolder: 'images/composants/LED/led-rgb/brochage',
                 footprint: 'Espacement des pattes: 2.54mm (0.1")\nConfiguration: 4 pattes en ligne\nDiamètre du corps: 5mm',
-                footprintFolder: 'images/composants/led-rgb/empatement',
+                footprintFolder: 'images/composants/LED/led-rgb/empatement',
                 formula: 'R(rouge) = (Vcc - 2V) / 0.02A\nR(vert) = (Vcc - 3.2V) / 0.02A\nR(bleu) = (Vcc - 3.2V) / 0.02A'
             }
         ]
@@ -157,9 +261,9 @@ const componentCategories = [
                 description: 'Grand condensateur pour filtrage et réservoir d\'énergie. ATTENTION : polarisé !',
                 usage: 'Filtrage alimentation, réservoir d\'énergie, lissage tension. Respecter la polarité : + vers VCC, - vers GND.',
                 pinout: 'Patte longue : + (positif)\nPatte courte : - (négatif, souvent marqué par une bande)',
-                pinoutFolder: 'images/composants/condensateur-1000uf/brochage',
+                pinoutFolder: 'images/composants/Condensateurs/cap-1000u/brochage',
                 footprint: 'Diamètre: 6.3-8mm\nEspacement des pattes: 2.5mm\nHauteur: 11-13mm',
-                footprintFolder: 'images/composants/condensateur-1000uf/empatement',
+                footprintFolder: 'images/composants/Condensateurs/cap-1000u/empatement',
                 formula: 'Énergie stockée: E = 0.5 × C × V² = 0.5 × 0.001 × 16² = 0.128 J'
             }
         ]
@@ -179,9 +283,9 @@ const componentCategories = [
                 description: 'Capteur numérique de température et humidité, très populaire et bon marché.',
                 usage: 'Station météo, monitoring environnemental, régulation climatique. Nécessite la bibliothèque DHT.',
                 pinout: 'VCC : 3.3V ou 5V\nDATA : broche numérique (avec pull-up 10kΩ)\nGND : masse',
-                pinoutFolder: 'images/composants/dht11/brochage',
+                pinoutFolder: 'images/composants/Capteurs/dht11/brochage',
                 footprint: 'Module: 15.5 × 12 × 5.5mm\nEspacement des pattes: 2.54mm',
-                footprintFolder: 'images/composants/dht11/empatement',
+                footprintFolder: 'images/composants/Capteurs/dht11/empatement',
                 code: '#include <DHT.h>\nDHT dht(PIN, DHT11);\nvoid setup() { dht.begin(); }\nfloat t = dht.readTemperature();\nfloat h = dht.readHumidity();'
             },
             {
@@ -193,9 +297,9 @@ const componentCategories = [
                 description: 'Capteur de distance à ultrasons très précis et abordable.',
                 usage: 'Mesure de distance, détection d\'obstacles, robot autonome, stationnement.',
                 pinout: 'VCC : 5V\nTrig : broche numérique (envoi impulsion)\nEcho : broche numérique (réception)\nGND : masse',
-                pinoutFolder: 'images/composants/hc-sr04/brochage',
+                pinoutFolder: 'images/composants/Capteurs/hcsr04/brochage',
                 footprint: 'Module: 45 × 20 × 15mm\nCapteurs espacés de 26mm',
-                footprintFolder: 'images/composants/hc-sr04/empatement',
+                footprintFolder: 'images/composants/Capteurs/hcsr04/empatement',
                 code: 'digitalWrite(trig, HIGH);\ndelayMicroseconds(10);\ndigitalWrite(trig, LOW);\nlong duration = pulseIn(echo, HIGH);\nint distance = duration * 0.034 / 2;'
             }
         ]
@@ -215,9 +319,9 @@ const componentCategories = [
                 description: 'Petit servomoteur très populaire, précis et abordable pour les projets Arduino.',
                 usage: 'Robotique, bras articulé, volet motorisé, direction RC. Signal PWM 50Hz (20ms), impulsions 1-2ms.',
                 pinout: 'Marron/Noir : GND\nRouge : VCC (5V externe recommandé)\nOrange/Jaune : Signal PWM',
-                pinoutFolder: 'images/composants/servo-sg90/brochage',
+                pinoutFolder: 'images/composants/Actionneurs/sg90/brochage',
                 footprint: 'Corps: 22.5 × 12 × 29mm\nFixes: 32mm entre trous de montage',
-                footprintFolder: 'images/composants/servo-sg90/empatement',
+                footprintFolder: 'images/composants/Actionneurs/sg90/empatement',
                 code: '#include <Servo.h>\nServo servo;\nvoid setup() { servo.attach(9); }\nservo.write(90); // Position 90°'
             },
             {
@@ -228,9 +332,9 @@ const componentCategories = [
                 description: 'Relais électromécanique permettant de contrôler des charges AC/DC puissantes.',
                 usage: 'Domotique, contrôle de lampes 220V, moteurs puissants, électrovannes. DANGER : 220V !',
                 pinout: 'VCC : 5V\nGND : masse\nIN : signal de commande (LOW = activé)\nCOM, NO, NC : contacts de puissance',
-                pinoutFolder: 'images/composants/relais-5v/brochage',
+                pinoutFolder: 'images/composants/Actionneurs/relay-5v/brochage',
                 footprint: 'Module: 50 × 26 × 18mm\nBorniers à vis pour haute tension',
-                footprintFolder: 'images/composants/relais-5v/empatement',
+                footprintFolder: 'images/composants/Actionneurs/relay-5v/empatement',
                 warning: '⚠️ ATTENTION : Manipuler avec précaution, risque électrique 220V AC !'
             }
         ]
@@ -249,9 +353,9 @@ const componentCategories = [
                 description: 'Registre à décalage permettant d\'étendre les sorties numériques avec seulement 3 broches.',
                 usage: 'Multiplexage LED, afficheurs 7 segments, expansion GPIO. Cascadable.',
                 pinout: 'DS (14) : données série\nSHCP (11) : horloge shift\nSTCP (12) : horloge stockage (latch)\nQ0-Q7 : sorties parallèles',
-                pinoutFolder: 'images/composants/74hc595/brochage',
+                pinoutFolder: 'images/composants/Circuits-Integres/74hc595/brochage',
                 footprint: 'Boîtier DIP-16\nEspacement des pattes: 2.54mm\nLargeur: 7.62mm',
-                footprintFolder: 'images/composants/74hc595/empatement',
+                footprintFolder: 'images/composants/Circuits-Integres/74hc595/empatement',
                 code: 'shiftOut(dataPin, clockPin, MSBFIRST, value);\ndigitalWrite(latchPin, HIGH);'
             }
         ]
@@ -312,7 +416,11 @@ const formulas = [
 function runMath(id) {
     const val = (k) => {
         let el = document.getElementById('m-' + id + '-' + k);
-        return (el && el.value !== "") ? parseFloat(el.value) : null;
+        if (!el) return null;
+        let v = el.value.trim();
+        if (v === '' || v === null || v === undefined) return null;
+        let num = parseFloat(v);
+        return isNaN(num) ? null : num;
     };
     
     let res = document.getElementById('res-' + id);
@@ -892,20 +1000,67 @@ function showComponentDetail(categoryId, componentId) {
         </div>`;
     }
     
-    if (component.pinout) {
+    // Brochage (Pinout)
+    if (component.pinout || component.pinoutFolder) {
         detailHTML += `
         <div class="card">
-            <h3 style="color:var(--accent); margin-top:0;">📌 Brochage</h3>`;
+            <h3 style="color:var(--accent); margin-top:0;">📌 Brochage (Pinout)</h3>`;
         
-        // Afficher l'image si disponible
-        if (component.pinoutImage) {
-            detailHTML += `
-            <img src="${component.pinoutImage}" alt="Brochage ${component.name}" 
-                 style="max-width:100%; border-radius:8px; margin:10px 0;"
-                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-            <pre style="background:#0f172a; padding:15px; border-radius:8px; font-size:12px; line-height:1.6; white-space:pre-wrap; display:none;">${component.pinout}</pre>`;
-        } else {
-            detailHTML += `<pre style="background:#0f172a; padding:15px; border-radius:8px; font-size:12px; line-height:1.6; white-space:pre-wrap;">${component.pinout}</pre>`;
+        // Afficher les images du dossier si disponible
+        if (component.pinoutFolder) {
+            const pinoutImages = [
+                '01-schema-complet.png',
+                '02-schema-alternatif.png',
+                '03-schema-simplifie.png'
+            ];
+            pinoutImages.forEach((imgName, index) => {
+                detailHTML += `
+                <div style="text-align:center; margin:15px 0;">
+                    <p style="font-size:12px; color:var(--accent); margin-bottom:8px;">${imgName.replace('.png', '').replace(/-/g, ' ')}</p>
+                    <img src="${component.pinoutFolder}/${imgName}" 
+                         alt="${imgName}" 
+                         style="max-width:100%; border-radius:8px; display:block; margin:0 auto;"
+                         onerror="this.parentElement.style.display='none';">
+                </div>`;
+            });
+        }
+        
+        if (component.pinout) {
+            detailHTML += `<pre style="background:#0f172a; padding:15px; border-radius:8px; font-size:12px; line-height:1.6; white-space:pre-wrap; margin-top:15px;">${component.pinout}</pre>`;
+        }
+        
+        detailHTML += `</div>`;
+    }
+    
+    // Empatement (Footprint)
+    if (component.footprint || component.footprintFolder) {
+        detailHTML += `
+        <div class="card">
+            <h3 style="color:var(--accent); margin-top:0;">📐 Empatement (Footprint)</h3>`;
+        
+        // Afficher les images du dossier si disponible
+        if (component.footprintFolder) {
+            const footprintImages = [
+                '01-vue-dessus.png',
+                '02-vue-cote.png',
+                '03-vue-face.png',
+                '04-dimensions.png',
+                '05-vue-3d.png'
+            ];
+            footprintImages.forEach((imgName, index) => {
+                detailHTML += `
+                <div style="text-align:center; margin:15px 0;">
+                    <p style="font-size:12px; color:var(--accent); margin-bottom:8px;">${imgName.replace('.png', '').replace(/-/g, ' ')}</p>
+                    <img src="${component.footprintFolder}/${imgName}" 
+                         alt="${imgName}" 
+                         style="max-width:100%; border-radius:8px; display:block; margin:0 auto;"
+                         onerror="this.parentElement.style.display='none';">
+                </div>`;
+            });
+        }
+        
+        if (component.footprint) {
+            detailHTML += `<pre style="background:#0f172a; padding:15px; border-radius:8px; font-size:12px; line-height:1.6; white-space:pre-wrap; margin-top:15px;">${component.footprint}</pre>`;
         }
         
         detailHTML += `</div>`;
@@ -1055,11 +1210,23 @@ function renderFolders() {
         return;
     }
     
-    list.innerHTML = db.map((f, i) => `
-        <div class="folder-item" onclick="openFolder(${i})">
+    // Trier par date de modification (plus récent en premier)
+    const sortedDb = [...db].sort((a, b) => {
+        const dateA = new Date(a.updatedAt || a.createdAt || 0);
+        const dateB = new Date(b.updatedAt || b.createdAt || 0);
+        return dateB - dateA;
+    });
+    
+    list.innerHTML = sortedDb.map((f) => {
+        const originalIndex = db.indexOf(f);
+        const lastUpdate = f.updatedAt || f.createdAt;
+        const dateStr = lastUpdate ? new Date(lastUpdate).toLocaleDateString('fr-FR', {day: '2-digit', month: '2-digit', year: 'numeric'}) : '';
+        return `
+        <div class="folder-item" onclick="openFolder(${originalIndex})">
             <div class="folder-thumb">${f.img ? `<img src="${f.img}" style="width:100%;height:100%;border-radius:10px;object-fit:cover">` : '📂'}</div>
-            <div style="flex:1"><b>${f.name}</b><br><span style="font-size:10px; opacity:0.6;">${f.status}</span></div>
-        </div>`).join('');
+            <div style="flex:1"><b>${f.name}</b><br><span style="font-size:10px; opacity:0.6;">${f.status}${dateStr ? ' • ' + dateStr : ''}</span></div>
+        </div>`;
+    }).join('');
 }
 
 function openFolder(i) {
@@ -1067,11 +1234,41 @@ function openFolder(i) {
     document.getElementById('edit-title').innerText = f.name;
     document.getElementById('edit-notes').value = f.notes || "";
     document.getElementById('edit-code').value = f.code || "";
+    
+    // Photo du projet final
     if(f.img) {
         document.getElementById('proj-img-preview').src = f.img;
         document.getElementById('proj-img-preview').style.display = 'block';
+        document.getElementById('proj-img-label').style.display = 'none';
+        document.getElementById('proj-img-actions').style.display = 'flex';
     } else {
         document.getElementById('proj-img-preview').style.display = 'none';
+        document.getElementById('proj-img-label').style.display = 'block';
+        document.getElementById('proj-img-actions').style.display = 'none';
+    }
+    
+    // Schéma de principe
+    if(f.schemaPrincipe) {
+        document.getElementById('schema-principe-preview').src = f.schemaPrincipe;
+        document.getElementById('schema-principe-preview').style.display = 'block';
+        document.getElementById('schema-principe-label').style.display = 'none';
+        document.getElementById('schema-principe-actions').style.display = 'flex';
+    } else {
+        document.getElementById('schema-principe-preview').style.display = 'none';
+        document.getElementById('schema-principe-label').style.display = 'block';
+        document.getElementById('schema-principe-actions').style.display = 'none';
+    }
+    
+    // Schéma Proteus
+    if(f.schemaProteus) {
+        document.getElementById('schema-proteus-preview').src = f.schemaProteus;
+        document.getElementById('schema-proteus-preview').style.display = 'block';
+        document.getElementById('schema-proteus-label').style.display = 'none';
+        document.getElementById('schema-proteus-actions').style.display = 'flex';
+    } else {
+        document.getElementById('schema-proteus-preview').style.display = 'none';
+        document.getElementById('schema-proteus-label').style.display = 'block';
+        document.getElementById('schema-proteus-actions').style.display = 'none';
     }
     
     // Afficher les composants du projet
@@ -1094,7 +1291,7 @@ function renderProjectComponents() {
         <div class="folder-item" style="margin-bottom:8px; padding:10px; border-left:3px solid var(--accent);" onclick="viewProjectComponent(${idx})">
             <div class="folder-thumb" style="width:40px; height:40px; font-size:20px;">${comp.icon}</div>
             <div style="flex:1">
-                <b style="font-size:13px;">${comp.name}</b><br>
+                <b style="font-size:13px;">${comp.quantity || 1}x ${comp.name}</b><br>
                 <span style="font-size:10px; opacity:0.6;">${comp.category}</span>
             </div>
             <button onclick="removeProjectComponent(${idx}); event.stopPropagation();" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:5px; font-size:11px;">✕</button>
@@ -1104,17 +1301,21 @@ function renderProjectComponents() {
 
 function openComponentPicker() {
     const content = document.getElementById('component-picker-content');
-    content.innerHTML = componentCategories.map(cat => `
+    content.innerHTML = `
+        <div style="margin-bottom:20px;">
+            <button class="btn" style="background:var(--success); width:100%;" onclick="validateComponentSelection()">✅ VALIDER LA SÉLECTION</button>
+        </div>
+    ` + componentCategories.map(cat => `
         <div style="margin-bottom:20px;">
             <h4 style="color:var(--accent); margin-bottom:10px;">${cat.icon} ${cat.name}</h4>
             ${cat.components.map(comp => `
-                <div class="folder-item" onclick="addComponentToProject('${cat.id}', '${comp.id}')" style="border-left:3px solid var(--primary); margin-bottom:8px; cursor:pointer;">
+                <div class="folder-item component-selectable" data-cat-id="${cat.id}" data-comp-id="${comp.id}" onclick="toggleComponentSelection(this)" style="border-left:3px solid #475569; margin-bottom:8px; cursor:pointer;">
+                    <input type="checkbox" class="component-checkbox" style="width:20px; height:20px; margin-right:10px;">
                     <div class="folder-thumb" style="width:40px; height:40px; font-size:20px;">${cat.icon}</div>
                     <div style="flex:1">
                         <b style="font-size:13px;">${comp.name}</b><br>
                         <span style="font-size:10px; opacity:0.6;">${comp.voltage || comp.type || ''}</span>
                     </div>
-                    <span style="font-size:16px;">+</span>
                 </div>
             `).join('')}
         </div>
@@ -1123,7 +1324,94 @@ function openComponentPicker() {
     openModal('modal-component-picker');
 }
 
+function toggleComponentSelection(element) {
+    const checkbox = element.querySelector('.component-checkbox');
+    checkbox.checked = !checkbox.checked;
+    
+    if (checkbox.checked) {
+        element.style.borderLeftColor = 'var(--accent)';
+        element.style.background = '#1e293b';
+    } else {
+        element.style.borderLeftColor = '#475569';
+        element.style.background = 'transparent';
+    }
+}
+
+function validateComponentSelection() {
+    const selected = document.querySelectorAll('.component-selectable input:checked');
+    
+    if (selected.length === 0) {
+        customAlert('Aucun composant sélectionné !', 'Attention');
+        return;
+    }
+    
+    // Créer un formulaire pour les quantités
+    let html = '<div style="padding:20px;">';
+    html += '<h3 style="color:var(--accent); margin-bottom:20px;">Définir les quantités</h3>';
+    
+    selected.forEach((checkbox, idx) => {
+        const item = checkbox.closest('.component-selectable');
+        const catId = item.getAttribute('data-cat-id');
+        const compId = item.getAttribute('data-comp-id');
+        const category = componentCategories.find(c => c.id === catId);
+        const component = category.components.find(c => c.id === compId);
+        
+        html += `
+            <div style="margin-bottom:12px; padding:12px; background:#1e293b; border-radius:8px; display:flex; align-items:center; gap:10px;">
+                <input type="number" id="qty-${idx}" data-cat-id="${catId}" data-comp-id="${compId}" placeholder="" min="1" 
+                    style="width:60px; padding:8px; background:#0f172a; border:1px solid var(--accent); border-radius:5px; color:white; text-align:center;">
+                <span style="color:white; font-size:14px;">× ${category.icon} ${component.name}</span>
+            </div>
+        `;
+    });
+    
+    html += '<button class="btn" style="background:var(--success); width:100%; margin-top:10px;" onclick="addMultipleComponents()">✅ AJOUTER LES COMPOSANTS</button>';
+    html += '</div>';
+    
+    document.getElementById('component-picker-content').innerHTML = html;
+}
+
+function addMultipleComponents() {
+    const inputs = document.querySelectorAll('[id^="qty-"]');
+    const f = db[currentIdx];
+    if (!f.components) f.components = [];
+    
+    let added = 0;
+    inputs.forEach(input => {
+        const catId = input.getAttribute('data-cat-id');
+        const compId = input.getAttribute('data-comp-id');
+        const quantity = parseInt(input.value) || 1;
+        
+        const category = componentCategories.find(c => c.id === catId);
+        if (!category) return;
+        const component = category.components.find(c => c.id === compId);
+        if (!component) return;
+        
+        // Vérifier si le composant existe déjà
+        const existing = f.components.find(c => c.id === compId);
+        if (existing) {
+            existing.quantity += quantity;
+        } else {
+            f.components.push({
+                id: compId,
+                categoryId: catId,
+                name: component.name,
+                category: category.name,
+                icon: category.icon,
+                quantity: quantity,
+                data: component
+            });
+        }
+        added++;
+    });
+    
+    saveProjectToFolder(db[currentIdx]);
+    renderProjectComponents();
+    closeModal('modal-component-picker');
+}
+
 function addComponentToProject(catId, compId) {
+    // Cette fonction n'est plus utilisée mais on la garde pour compatibilité
     const category = componentCategories.find(c => c.id === catId);
     if (!category) return;
     const component = category.components.find(c => c.id === compId);
@@ -1132,34 +1420,53 @@ function addComponentToProject(catId, compId) {
     const f = db[currentIdx];
     if (!f.components) f.components = [];
     
-    // Vérifier si le composant n'est pas déjà ajouté
-    if (f.components.find(c => c.id === compId)) {
-        alert('Ce composant est déjà dans votre projet !');
-        return;
-    }
-    
-    f.components.push({
-        id: compId,
-        categoryId: catId,
-        name: component.name,
-        category: category.name,
-        icon: category.icon,
-        data: component
+    // Demander la quantité
+    customPrompt('Quantité de ce composant ?', '1', 'Ajouter un composant').then(quantity => {
+        if (!quantity) return; // Annulé
+        quantity = parseInt(quantity);
+        if (isNaN(quantity) || quantity <= 0) {
+            customAlert('Quantité invalide !', 'Erreur');
+            return;
+        }
+        
+        // Vérifier si le composant existe déjà
+        const existing = f.components.find(c => c.id === compId);
+        if (existing) {
+            // Si déjà présent, augmenter la quantité
+            existing.quantity += quantity;
+            saveProjectToFolder(db[currentIdx]);
+            renderProjectComponents();
+            closeModal('modal-component-picker');
+            customAlert('Quantité mise à jour ! 💡', 'Succès');
+            return;
+        }
+        
+        f.components.push({
+            id: compId,
+            categoryId: catId,
+            name: component.name,
+            category: category.name,
+            icon: category.icon,
+            quantity: quantity,
+            data: component
+        });
+        
+        saveProjectToFolder(db[currentIdx]);
+        renderProjectComponents();
+        closeModal('modal-component-picker');
+        customAlert('Composant ajouté ! 💡', 'Succès');
     });
-    
-    saveProjectToFolder(db[currentIdx]);
-    renderProjectComponents();
-    closeModal('modal-component-picker');
-    alert('Composant ajouté ! 💡');
 }
 
 function removeProjectComponent(idx) {
     const f = db[currentIdx];
-    if (confirm('Retirer ce composant du projet ?')) {
-        f.components.splice(idx, 1);
-        saveProjectToFolder(db[currentIdx]);
-        renderProjectComponents();
-    }
+    customConfirm('Retirer ce composant du projet ?', 'Confirmation').then(result => {
+        if (result) {
+            f.components.splice(idx, 1);
+            saveProjectToFolder(db[currentIdx]);
+            renderProjectComponents();
+        }
+    });
 }
 
 function viewProjectComponent(idx) {
@@ -1170,35 +1477,67 @@ function viewProjectComponent(idx) {
 
 function newFolder() {
     if (!projectDirHandle) {
-        alert('⚠️ Aucun dossier configuré !\n\nVeuillez d\'abord configurer le dossier projet/ dans les paramètres.');
+        customAlert('⚠️ Aucun dossier configuré !\n\nVeuillez d\'abord configurer le dossier projet/ dans les paramètres.', 'Attention');
         return;
     }
     
-    let n = prompt("Nom du projet ?");
-    if(n) { 
-        const newProject = {name:n, status:'En cours', notes:'', code:'', img:'', components:[]};
-        db.push(newProject); 
-        saveProjectToFolder(newProject);
-        renderFolders();
-    }
+    customPrompt('Nom du projet ?', '', 'Nouveau projet').then(n => {
+        if(n) { 
+            const now = new Date().toISOString();
+            const newProject = {name:n, status:'En cours', notes:'', code:'', img:'', schemaPrincipe:'', schemaProteus:'', components:[], createdAt: now, updatedAt: now};
+            db.push(newProject); 
+            saveProjectToFolder(newProject);
+            renderFolders();
+        }
+    });
 }
 
 function saveProject() {
     db[currentIdx].notes = document.getElementById('edit-notes').value;
     db[currentIdx].code = document.getElementById('edit-code').value;
+    db[currentIdx].updatedAt = new Date().toISOString();
     saveProjectToFolder(db[currentIdx]);
     renderFolders(); 
     closeModal('modal-project');
 }
 
-function deleteFolder() {
-    if(confirm('Supprimer ce projet ?')) {
-        const project = db[currentIdx];
-        deleteProjectFile(project);
-        db.splice(currentIdx, 1);
-        renderFolders(); 
-        closeModal('modal-project');
+function duplicateProject() {
+    if (!projectDirHandle) {
+        customAlert('⚠️ Aucun dossier configuré !', 'Attention');
+        return;
     }
+    
+    const original = db[currentIdx];
+    const now = new Date().toISOString();
+    const copy = {
+        name: original.name + ' (copie)',
+        status: original.status,
+        notes: original.notes,
+        code: original.code,
+        img: original.img,
+        schemaPrincipe: original.schemaPrincipe || '',
+        schemaProteus: original.schemaProteus || '',
+        components: JSON.parse(JSON.stringify(original.components || [])),
+        createdAt: now,
+        updatedAt: now
+    };
+    
+    db.push(copy);
+    saveProjectToFolder(copy);
+    renderFolders();
+    closeModal('modal-project');
+}
+
+function deleteFolder() {
+    customConfirm('Supprimer ce projet ?', 'Suppression').then(result => {
+        if(result) {
+            const project = db[currentIdx];
+            deleteProjectFile(project);
+            db.splice(currentIdx, 1);
+            renderFolders(); 
+            closeModal('modal-project');
+        }
+    });
 }
 
 function previewFile() {
@@ -1209,10 +1548,72 @@ function previewFile() {
             db[currentIdx].img = e.target.result;
             document.getElementById('proj-img-preview').src = e.target.result;
             document.getElementById('proj-img-preview').style.display = 'block';
+            document.getElementById('proj-img-label').style.display = 'none';
+            document.getElementById('proj-img-actions').style.display = 'flex';
             saveProjectToFolder(db[currentIdx]);
         };
         reader.readAsDataURL(file);
     }
+}
+
+function previewSchemaPrincipe() {
+    const file = document.getElementById('schema-principe-upload').files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            db[currentIdx].schemaPrincipe = e.target.result;
+            document.getElementById('schema-principe-preview').src = e.target.result;
+            document.getElementById('schema-principe-preview').style.display = 'block';
+            document.getElementById('schema-principe-label').style.display = 'none';
+            document.getElementById('schema-principe-actions').style.display = 'flex';
+            saveProjectToFolder(db[currentIdx]);
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function previewSchemaProteus() {
+    const file = document.getElementById('schema-proteus-upload').files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            db[currentIdx].schemaProteus = e.target.result;
+            document.getElementById('schema-proteus-preview').src = e.target.result;
+            document.getElementById('schema-proteus-preview').style.display = 'block';
+            document.getElementById('schema-proteus-label').style.display = 'none';
+            document.getElementById('schema-proteus-actions').style.display = 'flex';
+            saveProjectToFolder(db[currentIdx]);
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function deleteImage(type) {
+    customConfirm('Supprimer cette image ?', 'Suppression').then(result => {
+        if (!result) return;
+        
+        if (type === 'img') {
+            db[currentIdx].img = '';
+            document.getElementById('proj-img-preview').style.display = 'none';
+            document.getElementById('proj-img-label').style.display = 'block';
+            document.getElementById('proj-img-actions').style.display = 'none';
+            document.getElementById('img-upload').value = '';
+        } else if (type === 'schemaPrincipe') {
+            db[currentIdx].schemaPrincipe = '';
+            document.getElementById('schema-principe-preview').style.display = 'none';
+            document.getElementById('schema-principe-label').style.display = 'block';
+            document.getElementById('schema-principe-actions').style.display = 'none';
+            document.getElementById('schema-principe-upload').value = '';
+        } else if (type === 'schemaProteus') {
+            db[currentIdx].schemaProteus = '';
+            document.getElementById('schema-proteus-preview').style.display = 'none';
+            document.getElementById('schema-proteus-label').style.display = 'block';
+            document.getElementById('schema-proteus-actions').style.display = 'none';
+            document.getElementById('schema-proteus-upload').value = '';
+        }
+        
+        saveProjectToFolder(db[currentIdx]);
+    });
 }
 
 // --- WIFI & ESP32 ---
@@ -1224,22 +1625,31 @@ function saveWifi() {
 
 function sendCmd(cmd) {
     let ip = localStorage.getItem('lab_ip');
-    if(!ip) return alert("Configurez l'IP dans les options !");
+    if(!ip) {
+        customAlert("Configurez l'IP dans les options !", 'Configuration requise');
+        return;
+    }
     fetch(`http://${ip}/${cmd}`)
     .then(r => r.text())
-    .then(t => alert("Réponse: " + t))
-    .catch(() => alert("Erreur de connexion"));
+    .then(t => customAlert("Réponse: " + t, 'Réponse ESP32'))
+    .catch(() => customAlert("Erreur de connexion", 'Erreur'));
 }
 
 function envoyerCode() {
     let mode = document.querySelector('input[name="code-mode"]:checked').value;
-    if (mode !== 'wifi') return alert('Sélectionnez le mode WiFi pour exécuter.');
+    if (mode !== 'wifi') {
+        customAlert('Sélectionnez le mode WiFi pour exécuter.', 'Mode incorrect');
+        return;
+    }
     let ip = localStorage.getItem('lab_ip');
-    if(!ip) return alert("Réglez l'IP !");
+    if(!ip) {
+        customAlert("Réglez l'IP !", 'Configuration requise');
+        return;
+    }
     let code = document.getElementById('edit-code').value;
     fetch(`http://${ip}/execute`, { method: 'POST', body: code, mode: 'no-cors' })
-    .then(() => alert("Commandes exécutées via WiFi !"))
-    .catch(() => alert("Erreur : ESP32 injoignable"));
+    .then(() => customAlert("Commandes exécutées via WiFi !", 'Succès'))
+    .catch(() => customAlert("Erreur : ESP32 injoignable", 'Erreur'));
 }
 
 // ========================================
@@ -1356,7 +1766,7 @@ async function loadProjectsFromFolder() {
 // Demander l'accès au dossier projet/ (optionnel, via bouton)
 async function requestProjectFolderAccess() {
     if (!('showDirectoryPicker' in window)) {
-        alert('❌ Votre navigateur ne supporte pas cette fonctionnalité.\n\nUtilisez Chrome ou Edge.');
+        customAlert('❌ Votre navigateur ne supporte pas cette fonctionnalité.\n\nUtilisez Chrome ou Edge.', 'Navigateur non supporté');
         return false;
     }
     
@@ -1371,7 +1781,7 @@ async function requestProjectFolderAccess() {
         
         await loadAllProjects();
         renderFolders();
-        alert('✅ Dossier "projet" configuré !\n\nVos projets seront sauvegardés automatiquement dans ce dossier.\n\n💾 Le dossier sera mémorisé pour les prochaines visites.');
+        customAlert('✅ Dossier "projet" configuré !\n\nVos projets seront sauvegardés automatiquement dans ce dossier.\n\n💾 Le dossier sera mémorisé pour les prochaines visites.', 'Configuration réussie');
         return true;
     } catch (error) {
         if (error.name !== 'AbortError') {
@@ -1410,7 +1820,7 @@ async function loadAllProjects() {
 async function saveProjectToFolder(project) {
     // Vérifier qu'un dossier est configuré
     if (!projectDirHandle) {
-        alert('⚠️ Aucun dossier configuré !\n\nVeuillez configurer le dossier projet/ dans les paramètres.');
+        customAlert('⚠️ Aucun dossier configuré !\n\nVeuillez configurer le dossier projet/ dans les paramètres.', 'Attention');
         return;
     }
     
@@ -1470,7 +1880,7 @@ function clearCalc(id) {
 
 function copyCode() {
     navigator.clipboard.writeText(document.getElementById('edit-code').value);
-    alert('Code copié dans le presse-papiers ! Collez-le dans l\'IDE Arduino.');
+    customAlert('Code copié dans le presse-papiers ! Collez-le dans l\'IDE Arduino.', 'Succès');
 }
 
 // ========================================
@@ -1491,10 +1901,10 @@ window.onload = async () => {
     if (firstVisit) {
         localStorage.setItem('lab_visited', 'true');
         setTimeout(() => {
-            alert('👋 Bienvenue sur ESP32 Lab Pro !\n\n' +
+            customAlert('👋 Bienvenue sur ESP32 Lab Pro !\n\n' +
                   '📁 Tes projets sont sauvegardés localement\n\n' +
                   '💡 Crée, modifie et gère tes projets Arduino !\n\n' +
-                  'Bon travail ! 🚀');
+                  'Bon travail ! 🚀', 'Bienvenue');
         }, 1000);
     }
 };

@@ -82,7 +82,7 @@
         .modal-header { padding: 15px 20px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; background: var(--card); }
         
         .code-editor { background: #000; color: #22c55e; font-family: 'Courier New', monospace; height: 250px; border: 1px solid var(--primary); padding: 12px; font-size: 12px; line-height: 1.4;}
-        .img-preview { width: 100%; height: 180px; border-radius: 15px; object-fit: cover; margin-bottom: 15px; background: transparent; border: 1px solid #334155;}
+        .img-preview { width: 100%; max-height: 400px; border-radius: 15px; object-fit: contain; margin-bottom: 15px; background: #0f172a; border: 1px solid #334155;}
 
         .formula-item {
             background: var(--card); padding: 18px; border-radius: 15px;
@@ -215,6 +215,11 @@
                 <div><b>Configuration WiFi</b><br><small style="color:#94a3b8;">IP de l'ESP32</small></div>
             </div>
             
+            <div class="menu-option" onclick="closeModal('modal-settings-menu'); openModal('modal-help');">
+                <span style="font-size:24px;">❓</span>
+                <div><b>Aide</b><br><small style="color:#94a3b8;">Tutoriels et documentation</small></div>
+            </div>
+            
             <div class="menu-option" onclick="alert('⚙️ Paramètres avancés\n\nCette section sera disponible prochainement !');">
                 <span style="font-size:24px;">⚙️</span>
                 <div><b>Paramètres avancés</b><br><small style="color:#94a3b8;">Personnalisation</small></div>
@@ -331,16 +336,42 @@ void executeCommand(String cmd) {
         <div class="modal-header">
             <button onclick="closeModal('modal-project')" style="color:var(--primary); background:none; border:none; font-weight:bold;">← Retour</button>
             <h3 id="edit-title">Détails</h3>
-            <button onclick="saveProject()" style="background:var(--success); color:white; border:none; padding:8px 15px; border-radius:10px;">OK</button>
+            <div style="display:flex; gap:8px;">
+                <button onclick="duplicateProject()" style="background:var(--accent); color:white; border:none; padding:8px 15px; border-radius:10px;">📋 Dupliquer</button>
+                <button onclick="saveProject()" style="background:var(--success); color:white; border:none; padding:8px 15px; border-radius:10px;">OK</button>
+            </div>
         </div>
         <div style="padding: 20px; overflow-y: auto; flex: 1;">
-            <img id="proj-img-preview" class="img-preview" style="display:none;">
-            <label for="img-upload" style="background:#334155; color:white; padding:12px; border-radius:10px; display:block; text-align:center; cursor:pointer; margin-bottom:20px;">📸 Photo du projet</label>
+            <label style="color:var(--accent); font-size:11px; font-weight:bold;">PHOTO DU PROJET FINAL</label>
+            <img id="proj-img-preview" class="img-preview" style="display:none; margin-top:10px;">
+            <label for="img-upload" id="proj-img-label" style="background:#334155; color:white; padding:12px; border-radius:10px; display:block; text-align:center; cursor:pointer; margin-bottom:10px; margin-top:10px;">📸 Ajouter une photo</label>
             <input type="file" id="img-upload" accept="image/*" style="display:none" onchange="previewFile()">
+            <div id="proj-img-actions" style="display:none; gap:10px; margin-bottom:20px;">
+                <button onclick="document.getElementById('img-upload').click()" style="flex:1; background:var(--accent); color:white; border:none; padding:8px; border-radius:8px;">✏️ Modifier</button>
+                <button onclick="deleteImage('img')" style="flex:1; background:var(--danger); color:white; border:none; padding:8px; border-radius:8px;">🗑️ Supprimer</button>
+            </div>
+            
+            <label style="color:var(--accent); font-size:11px; font-weight:bold; margin-top:15px; display:block;">SCHÉMA DE PRINCIPE (TINKERCAD)</label>
+            <img id="schema-principe-preview" class="img-preview" style="display:none; margin-top:10px;">
+            <label for="schema-principe-upload" id="schema-principe-label" style="background:#334155; color:white; padding:12px; border-radius:10px; display:block; text-align:center; cursor:pointer; margin-bottom:10px; margin-top:10px;">🔌 Ajouter un schéma</label>
+            <input type="file" id="schema-principe-upload" accept="image/*" style="display:none" onchange="previewSchemaPrincipe()">
+            <div id="schema-principe-actions" style="display:none; gap:10px; margin-bottom:20px;">
+                <button onclick="document.getElementById('schema-principe-upload').click()" style="flex:1; background:var(--accent); color:white; border:none; padding:8px; border-radius:8px;">✏️ Modifier</button>
+                <button onclick="deleteImage('schemaPrincipe')" style="flex:1; background:var(--danger); color:white; border:none; padding:8px; border-radius:8px;">🗑️ Supprimer</button>
+            </div>
+            
+            <label style="color:var(--accent); font-size:11px; font-weight:bold; margin-top:15px; display:block;">SCHÉMA PROTEUS</label>
+            <img id="schema-proteus-preview" class="img-preview" style="display:none; margin-top:10px;">
+            <label for="schema-proteus-upload" id="schema-proteus-label" style="background:#334155; color:white; padding:12px; border-radius:10px; display:block; text-align:center; cursor:pointer; margin-bottom:10px; margin-top:10px;">⚡ Ajouter un schéma</label>
+            <input type="file" id="schema-proteus-upload" accept="image/*" style="display:none" onchange="previewSchemaProteus()">
+            <div id="schema-proteus-actions" style="display:none; gap:10px; margin-bottom:20px;">
+                <button onclick="document.getElementById('schema-proteus-upload').click()" style="flex:1; background:var(--accent); color:white; border:none; padding:8px; border-radius:8px;">✏️ Modifier</button>
+                <button onclick="deleteImage('schemaProteus')" style="flex:1; background:var(--danger); color:white; border:none; padding:8px; border-radius:8px;">🗑️ Supprimer</button>
+            </div>
             
             <label style="color:var(--accent); font-size:11px; font-weight:bold;">COMPOSANTS UTILISÉS</label>
             <div id="project-components" style="margin-bottom:15px;"></div>
-            <button class="btn" style="background:var(--accent); margin-bottom:20px;" onclick="openComponentPicker()">+ AJOUTER UN COMPOSANT</button>
+            <button class="btn" style="background:var(--accent); margin-bottom:20px;" onclick="openComponentPicker()">+ AJOUTER DES COMPOSANTS</button>
             
             <label style="color:var(--accent); font-size:11px; font-weight:bold;">NOTES (PINOUT, SCHÉMA)</label>
             <textarea id="edit-notes" rows="4" placeholder="Notes..."></textarea>
@@ -411,11 +442,116 @@ Mode WiFi : commandes simples pour exécution distante (ex: led 13 on, delay 100
         <div id="component-list-content" style="padding: 20px; overflow-y: auto; flex: 1;"></div>
     </div>
 
+    <!-- Modale Aide -->
+    <div id="modal-help" class="modal">
+        <div class="modal-header">
+            <button onclick="closeModal('modal-help')" style="color:var(--primary); background:none; border:none;">← Retour</button>
+            <h3>❓ Aide</h3>
+            <div style="width:60px"></div>
+        </div>
+        <div style="padding: 20px; overflow-y: auto; flex: 1;">
+            <div class="card">
+                <h3 style="color:var(--accent); margin-top:0;">📁 Configuration du dossier projet</h3>
+                <p style="line-height:1.6;">Pour sauvegarder vos projets :</p>
+                <ol style="line-height:1.8;">
+                    <li>Allez dans l'onglet <b>Projects</b></li>
+                    <li>Cliquez sur <b>"📁 Configurer le dossier projet"</b></li>
+                    <li>Sélectionnez le dossier <code style="background:#0f172a; padding:2px 6px; border-radius:4px;">projet/</code> de votre dépôt</li>
+                    <li>Autorisez l'accès au dossier</li>
+                </ol>
+                <p style="background:#0f172a; padding:12px; border-radius:8px; border-left:4px solid var(--accent);">
+                    💡 <b>Important :</b> Cette fonctionnalité fonctionne uniquement sur <b>Chrome</b> ou <b>Edge</b>.
+                </p>
+            </div>
+            
+            <div class="card">
+                <h3 style="color:var(--accent); margin-top:0;">💾 Synchronisation Git</h3>
+                <p style="line-height:1.6;">Vos projets sont automatiquement sauvegardés dans le dossier <code style="background:#0f172a; padding:2px 6px; border-radius:4px;">projet/</code>.</p>
+                <p style="line-height:1.6;">Pour synchroniser avec GitHub :</p>
+                <ol style="line-height:1.8;">
+                    <li>Ouvrez un terminal dans votre dépôt</li>
+                    <li>Exécutez les commandes :
+                        <pre style="background:#000; color:#22c55e; padding:12px; border-radius:8px; margin-top:8px;">git add projet/*.json
+git commit -m "Sauvegarde projets"
+git push</pre>
+                    </li>
+                </ol>
+            </div>
+            
+            <div class="card">
+                <h3 style="color:var(--accent); margin-top:0;">📄 Dupliquer un projet</h3>
+                <p style="line-height:1.6;">Pour dupliquer un projet existant :</p>
+                <ol style="line-height:1.8;">
+                    <li>Ouvrez le projet à dupliquer</li>
+                    <li>Cliquez sur le bouton <b>"📋 Dupliquer"</b> à gauche du bouton OK</li>
+                    <li>Une copie sera créée avec le suffixe "(copie)"</li>
+                </ol>
+            </div>
+            
+            <div class="card">
+                <h3 style="color:var(--accent); margin-top:0;">📅 Timeline des projets</h3>
+                <p style="line-height:1.6;">Les projets sont automatiquement triés par <b>date de dernière modification</b> (le plus récent en premier).</p>
+                <p style="line-height:1.6;">La date affichée sous chaque projet correspond à la dernière sauvegarde.</p>
+            </div>
+            
+            <div class="card">
+                <h3 style="color:var(--accent); margin-top:0;">⚡ Composants</h3>
+                <p style="line-height:1.6;">Pour ajouter un composant à un projet :</p>
+                <ol style="line-height:1.8;">
+                    <li>Ouvrez le projet</li>
+                    <li>Cliquez sur <b>"+ AJOUTER UN COMPOSANT"</b></li>
+                    <li>Sélectionnez une catégorie, puis le composant</li>
+                    <li>Le composant sera ajouté à votre projet avec ses informations techniques</li>
+                </ol>
+            </div>
+            
+            <div class="card">
+                <h3 style="color:var(--accent); margin-top:0;">🧮 Formules</h3>
+                <p style="line-height:1.6;">L'onglet <b>Formula</b> contient des calculateurs pour :</p>
+                <ul style="line-height:1.8;">
+                    <li>Loi d'Ohm (V = R × I)</li>
+                    <li>Puissance (électrique, mécanique)</li>
+                    <li>Capacité et fréquence</li>
+                    <li>Diviseur de tension</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <nav class="bottom-nav">
         <button class="nav-btn active" id="nav-home" onclick="switchView('view-home')"><span class="nav-icon">🏠</span>Home</button>
         <button class="nav-btn" id="nav-folders" onclick="switchView('view-folders')"><span class="nav-icon">📂</span>Projects</button>
         <button class="nav-btn" id="nav-tools" onclick="switchView('view-tools')"><span class="nav-icon">🧮</span>Formula</button>
     </nav>
+
+    <!-- Modale de confirmation personnalisée -->
+    <div id="custom-confirm-modal" class="modal" style="display:none; background:rgba(0,0,0,0.7);">
+        <div style="max-width:350px; width:90%; margin:auto; margin-top:25vh; animation: slideIn 0.2s ease;">
+            <div class="card" style="box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                <h3 id="custom-confirm-title" style="color:var(--accent); margin-top:0; font-size:18px;">Confirmation</h3>
+                <p id="custom-confirm-message" style="line-height:1.6; margin:15px 0; color:#cbd5e1;"></p>
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button id="custom-confirm-cancel" class="btn" style="flex:1; background:#475569; padding:10px;">Annuler</button>
+                    <button id="custom-confirm-ok" class="btn" style="flex:1; background:var(--danger); padding:10px;">Confirmer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modale de saisie personnalisée -->
+    <div id="custom-prompt-modal" class="modal" style="display:none; background:rgba(0,0,0,0.7);">
+        <div style="max-width:350px; width:90%; margin:auto; margin-top:25vh; animation: slideIn 0.2s ease;">
+            <div class="card" style="box-shadow: 0 10px 40px rgba(0,0,0,0.5);">
+                <h3 id="custom-prompt-title" style="color:var(--accent); margin-top:0; font-size:18px;">Saisie</h3>
+                <p id="custom-prompt-message" style="line-height:1.6; margin:10px 0; color:#cbd5e1; font-size:14px;"></p>
+                <input type="text" id="custom-prompt-input" style="width:100%; padding:12px; background:#0f172a; border:1px solid var(--accent); border-radius:8px; color:white; margin:15px 0; box-sizing:border-box;">
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button id="custom-prompt-cancel" class="btn" style="flex:1; background:#475569; padding:10px;">Annuler</button>
+                    <button id="custom-prompt-ok" class="btn" style="flex:1; background:var(--success); padding:10px;">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
 </body>

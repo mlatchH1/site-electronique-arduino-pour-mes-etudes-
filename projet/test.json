@@ -1,26 +1,109 @@
 {
   "name": "test",
   "status": "En cours",
-  "notes": "cgfj",
-  "code": "",
+  "notes": "bvhizrbvihzbvhkonbvuqvpcinvjoqs",
+  "code": "vchidzbbzrhivbrihbzih",
   "img": "",
+  "schemaPrincipe": "",
+  "schemaProteus": "",
   "components": [
     {
-      "id": "led-rgb",
+      "id": "led-red",
       "categoryId": "led",
-      "name": "LED RGB commune cathode",
+      "name": "LED Rouge 5mm",
       "category": "LED",
       "icon": "💡",
+      "quantity": 1,
       "data": {
-        "id": "led-rgb",
-        "name": "LED RGB commune cathode",
-        "voltage": "2-3.5V (selon couleur)",
-        "current": "20 mA par canal",
-        "description": "LED tricolore permettant de créer toutes les couleurs en mélangeant rouge, vert et bleu.",
-        "usage": "Éclairage RGB, indicateurs multicolores, ambiance lumineuse. Nécessite 3 résistances (une par couleur) et 4 fils.",
-        "pinout": "Cathode commune (GND) : 2e patte (la plus longue)\nRouge : 1ère patte\nVert : 3e patte\nBleu : 4e patte",
-        "formula": "R(rouge) = (Vcc - 2V) / 0.02A\nR(vert) = (Vcc - 3.2V) / 0.02A\nR(bleu) = (Vcc - 3.2V) / 0.02A"
+        "id": "led-red",
+        "name": "LED Rouge 5mm",
+        "voltage": "1.8-2.2V",
+        "current": "20 mA",
+        "wavelength": "620-625 nm",
+        "description": "LED standard rouge, la plus courante dans les projets électroniques. Tension de seuil typique de 2V.",
+        "usage": "Utilisée comme indicateur d'état, alarme visuelle, décoration. Toujours utiliser avec une résistance de limitation de courant.",
+        "pinout": "Anode (+) : patte longue\nCathode (-) : patte courte, côté plat",
+        "pinoutFolder": "images/composants/LED/led-red/brochage",
+        "footprint": "Espacement des pattes: 2.54mm (0.1\")\nDiamètre du corps: 5mm\nHauteur totale: ~8.5mm",
+        "footprintFolder": "images/composants/LED/led-red/empatement",
+        "formula": "R = (Vcc - Vled) / I",
+        "calculator": {
+          "inputs": [
+            {
+              "id": "vcc",
+              "label": "Tension source (V)",
+              "default": 5
+            },
+            {
+              "id": "vled",
+              "label": "Tension LED (V)",
+              "default": 2
+            },
+            {
+              "id": "iled",
+              "label": "Courant LED (mA)",
+              "default": 20
+            }
+          ],
+          "calc": "(vcc - vled) / (iled / 1000)",
+          "result": "Résistance nécessaire: {result} Ω"
+        }
+      }
+    },
+    {
+      "id": "resistor-220",
+      "categoryId": "resistor",
+      "name": "Résistance 220Ω",
+      "category": "Résistances",
+      "icon": "⚡",
+      "quantity": 1,
+      "data": {
+        "id": "resistor-220",
+        "name": "Résistance 220Ω",
+        "tolerance": "±5%",
+        "power": "0.25W",
+        "colorCode": "Rouge-Rouge-Marron-Or",
+        "description": "Résistance très courante, idéale pour limiter le courant des LED avec Arduino (5V).",
+        "usage": "Protection LED, pull-up/pull-down, diviseur de tension.",
+        "formula": "I = V / R = 5V / 220Ω = 22.7 mA\nP = V² / R = 25 / 220 = 0.114W (OK pour 0.25W)"
+      }
+    },
+    {
+      "id": "cap-100n",
+      "categoryId": "capacitor",
+      "name": "Condensateur céramique 100nF",
+      "category": "Condensateurs",
+      "icon": "🔋",
+      "quantity": 1,
+      "data": {
+        "id": "cap-100n",
+        "name": "Condensateur céramique 100nF",
+        "voltage": "50V",
+        "type": "Céramique",
+        "description": "Condensateur de découplage/filtrage très utilisé en électronique numérique.",
+        "usage": "Filtrage alimentation, découplage IC, anti-rebond bouton. Placer au plus près des broches VCC/GND des circuits intégrés.",
+        "formula": "Fréquence de coupure (avec R=1kΩ): fc = 1/(2πRC) = 1/(2π × 1000 × 100e-9) = 1.59 kHz"
+      }
+    },
+    {
+      "id": "resistor-10k",
+      "categoryId": "resistor",
+      "name": "Résistance 10kΩ",
+      "category": "Résistances",
+      "icon": "⚡",
+      "quantity": 1,
+      "data": {
+        "id": "resistor-10k",
+        "name": "Résistance 10kΩ",
+        "tolerance": "±5%",
+        "power": "0.25W",
+        "colorCode": "Marron-Noir-Orange-Or",
+        "description": "Résistance de pull-up/pull-down standard pour boutons et switches.",
+        "usage": "Pull-up/pull-down pour boutons, diviseur de tension, protection d'entrées.",
+        "formula": "I (pull-up à 5V) = V / R = 5V / 10kΩ = 0.5 mA"
       }
     }
-  ]
+  ],
+  "createdAt": "2026-01-04T19:16:52.489Z",
+  "updatedAt": "2026-01-04T19:19:39.795Z"
 }
