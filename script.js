@@ -2,6 +2,100 @@ let db = [];
 let currentIdx = null;
 let projectDirHandle = null; // Handle vers le dossier "projet" (obligatoire pour sauvegarder)
 
+// --- FONCTIONS UTILITAIRES ---
+// Nettoie les noms de fichiers pour l'affichage (retire numéros et extension)
+function cleanImageName(filename) {
+    return filename
+        .replace('.png', '')
+        .replace('.jpg', '')
+        .replace(/^\d+-/, '')  // Retire "01-", "02-", etc. au début
+        .replace(/-/g, ' ')     // Remplace les tirets par des espaces
+        .replace(/\b\w/g, l => l.toUpperCase()); // Première lettre en majuscule
+}
+
+// Calcule le code couleur d'une résistance (4 bandes)
+function getResistorColorCode(value) {
+    const colors = {
+        0: 'Noir', 1: 'Marron', 2: 'Rouge', 3: 'Orange', 4: 'Jaune',
+        5: 'Vert', 6: 'Bleu', 7: 'Violet', 8: 'Gris', 9: 'Blanc'
+    };
+    
+    let ohms = value;
+    let multiplier = 0;
+    
+    // Convertir kΩ et MΩ en Ω
+    if (typeof value === 'string') {
+        if (value.includes('M')) {
+            ohms = parseFloat(value) * 1000000;
+        } else if (value.includes('k')) {
+            ohms = parseFloat(value) * 1000;
+        } else {
+            ohms = parseFloat(value);
+        }
+    }
+    
+    // Trouver le multiplicateur
+    while (ohms >= 100 && multiplier < 9) {
+        ohms /= 10;
+        multiplier++;
+    }
+    
+    const digit1 = Math.floor(ohms / 10);
+    const digit2 = Math.floor(ohms % 10);
+    
+    return `${colors[digit1]}-${colors[digit2]}-${colors[multiplier]}-Or`;
+}
+
+// Génère automatiquement toutes les résistances standard
+function generateStandardResistors() {
+    const e12 = [10, 12, 15, 18, 22, 27, 33, 39, 47, 56, 68, 82];
+    const multipliers = [1, 10, 100, 1000, 10000, 100000, 1000000];
+    const resistors = [];
+    
+    multipliers.forEach(mult => {
+        e12.forEach(base => {
+            const value = base * mult;
+            let displayValue, id;
+            
+            if (value >= 1000000) {
+                displayValue = (value / 1000000) + 'MΩ';
+                id = 'resistor-' + (value / 1000000) + 'm';
+            } else if (value >= 1000) {
+                displayValue = (value / 1000) + 'kΩ';
+                id = 'resistor-' + (value / 1000) + 'k';
+            } else {
+                displayValue = value + 'Ω';
+                id = 'resistor-' + value;
+            }
+            
+            resistors.push({
+                id: id,
+                name: 'Résistance ' + displayValue,
+                value: value,
+                displayValue: displayValue,
+                tolerance: '±5%',
+                power: '0.25W',
+                colorCode: getResistorColorCode(value),
+                symbole: 'images/composants/Resistances/_shared/symbole/symbole.png',
+                description: `Résistance de ${displayValue}, utilisée pour limiter le courant ou créer des diviseurs de tension.`,
+                usage: 'Limitation de courant, pull-up/pull-down, diviseur de tension, protection de composants.',
+                pinoutFolder: 'images/composants/Resistances/_shared/brochage',
+                footprintFolder: 'images/composants/Resistances/_shared/empreinte',
+                formula: `Loi d'Ohm: I = V / R\nPuissance: P = V² / R\nAvec R = ${displayValue}`,
+                calculator: {
+                    variables: [
+                        {id: 'i', label: 'Courant (I)', unit: 'A', default: (5/value).toFixed(3), formula: `v / ${value}`},
+                        {id: 'v', label: 'Tension (V)', unit: 'V', default: 5, formula: `i * ${value}`},
+                        {id: 'p', label: 'Puissance (P)', unit: 'W', default: (25/value).toFixed(3), formula: `v * v / ${value}`}
+                    ]
+                }
+            });
+        });
+    });
+    
+    return resistors;
+}
+
 // --- MODALES PERSONNALISÉES ---
 function customAlert(message, title = 'Information') {
     return new Promise((resolve) => {
@@ -137,6 +231,36 @@ const arduinoBoards = [
         applications: 'Parfait pour : robotique de base, domotique, projets éducatifs, prototypage rapide, contrôle de moteurs, capteurs simples.'
     },
     {
+        id: 'mega',
+        name: 'Arduino Mega 2560',
+        icon: '🔴',
+        microcontroller: 'ATmega2560',
+        voltage: '5V',
+        clock: '16 MHz',
+        flash: '256 KB',
+        sram: '8 KB',
+        eeprom: '4 KB',
+        digitalPins: 54,
+        analogPins: 16,
+        pwmPins: 15,
+        currentPerPin: '20 mA',
+        usbType: 'USB Type-B',
+        dimensions: '101.52 × 53.3 mm',
+        description: 'L\'Arduino Mega 2560 est la carte la plus puissante de la gamme classique Arduino. Avec 54 broches numériques et 16 entrées analogiques, elle est idéale pour les projets complexes nécessitant de nombreuses connexions.',
+        features: [
+            '54 broches numériques (dont 15 PWM)',
+            '16 entrées analogiques (10 bits)',
+            '4 ports série UART matériels',
+            'Interface SPI et I2C',
+            'Alimentation via USB ou 7-12V DC',
+            '256 KB de mémoire Flash',
+            '8 KB de SRAM',
+            'Compatible avec la plupart des shields Uno'
+        ],
+        pinout: 'Broches numériques: D0-D53\nBroches analogiques: A0-A15\nPWM: D2-D13, D44-D46\nUART0: D0 (RX0), D1 (TX0)\nUART1: D19 (RX1), D18 (TX1)\nUART2: D17 (RX2), D16 (TX2)\nUART3: D15 (RX3), D14 (TX3)\nSPI: D50 (MISO), D51 (MOSI), D52 (SCK), D53 (SS)\nI2C: D20 (SDA), D21 (SCL)',
+        applications: 'Idéal pour : imprimantes 3D, CNC, projets robotiques avancés, affichages multiples, nombreux capteurs/actionneurs, interfaces complexes, contrôle multi-moteurs.'
+    },
+    {
         id: 'nano-esp32',
         name: 'Arduino Nano ESP32',
         icon: '🟢',
@@ -182,17 +306,21 @@ const componentCategories = [
                 voltage: '1.8-2.2V',
                 current: '20 mA',
                 wavelength: '620-625 nm',
+                symbole: 'images/composants/led/_shared/symbole/symbole.png',
                 description: 'LED standard rouge, la plus courante dans les projets électroniques. Tension de seuil typique de 2V.',
                 usage: 'Utilisée comme indicateur d\'état, alarme visuelle, décoration. Toujours utiliser avec une résistance de limitation de courant.',
                 pinout: 'Anode (+) : patte longue\nCathode (-) : patte courte, côté plat',
-                pinoutFolder: 'images/composants/LED/led-red/brochage',
+                pinoutFolder: 'images/composants/led/_shared/brochage',
                 footprint: 'Espacement des pattes: 2.54mm (0.1")\nDiamètre du corps: 5mm\nHauteur totale: ~8.5mm',
-                footprintFolder: 'images/composants/LED/led-red/empatement',
+                footprintFolder: 'images/composants/led/_shared/empreinte',
                 formula: 'R = (Vcc - Vled) / I',
                 calculator: {
-                    inputs: [{id: 'vcc', label: 'Tension source (V)', default: 5}, {id: 'vled', label: 'Tension LED (V)', default: 2}, {id: 'iled', label: 'Courant LED (mA)', default: 20}],
-                    calc: '(vcc - vled) / (iled / 1000)',
-                    result: 'Résistance nécessaire: {result} Ω'
+                    variables: [
+                        {id: 'r', label: 'Résistance (R)', unit: 'Ω', default: 150, formula: '(vcc - vled) / i'},
+                        {id: 'vcc', label: 'Tension source (Vcc)', unit: 'V', default: 5, formula: '(r * i) + vled'},
+                        {id: 'i', label: 'Courant (I)', unit: 'A', default: 0.02, formula: '(vcc - vled) / r'},
+                        {id: 'vled', label: 'Tension LED (Vled)', unit: 'V', default: 2, fixed: true, formula: '0'}
+                    ]
                 }
             },
             {
@@ -200,13 +328,191 @@ const componentCategories = [
                 name: 'LED RGB commune cathode',
                 voltage: '2-3.5V (selon couleur)',
                 current: '20 mA par canal',
+                symbole: 'images/composants/led/led-rgb/symbole/symbole.png',
                 description: 'LED tricolore permettant de créer toutes les couleurs en mélangeant rouge, vert et bleu.',
                 usage: 'Éclairage RGB, indicateurs multicolores, ambiance lumineuse. Nécessite 3 résistances (une par couleur) et 4 fils.',
                 pinout: 'Cathode commune (GND) : 2e patte (la plus longue)\nRouge : 1ère patte\nVert : 3e patte\nBleu : 4e patte',
-                pinoutFolder: 'images/composants/LED/led-rgb/brochage',
+                pinoutFolder: 'images/composants/led/led-rgb/brochage',
                 footprint: 'Espacement des pattes: 2.54mm (0.1")\nConfiguration: 4 pattes en ligne\nDiamètre du corps: 5mm',
-                footprintFolder: 'images/composants/LED/led-rgb/empatement',
-                formula: 'R(rouge) = (Vcc - 2V) / 0.02A\nR(vert) = (Vcc - 3.2V) / 0.02A\nR(bleu) = (Vcc - 3.2V) / 0.02A'
+                footprintFolder: 'images/composants/led/led-rgb/empreinte',
+                formula: 'R = (Vcc - Vled) / I\nRouge: Vled ≈ 2V\nVert: Vled ≈ 3.2V\nBleu: Vled ≈ 3.2V\nI = 20mA par canal',
+                calculator: {
+                    variables: [
+                        {id: 'r', label: 'Résistance (R)', unit: 'Ω', default: 150, formula: '(vcc - vled) / i'},
+                        {id: 'vcc', label: 'Tension source (Vcc)', unit: 'V', default: 5, formula: '(r * i) + vled'},
+                        {id: 'i', label: 'Courant (I)', unit: 'A', default: 0.02, formula: '(vcc - vled) / r'},
+                        {id: 'vled', label: 'Tension LED (Vled)', unit: 'V', default: 2, formula: '0', note: 'Rouge:2V, Vert/Bleu:3.2V'}
+                    ]
+                }
+            },
+            {
+                id: 'led-green',
+                name: 'LED verte',
+                voltage: '2-3.2V',
+                current: '20 mA',
+                symbole: 'images/composants/led/_shared/symbole/symbole.png',
+                description: 'LED standard verte, très populaire pour les indicateurs d\'état.',
+                usage: 'Indicateur ON/OFF, état système, signalisation.',
+                pinout: 'Anode (+) : patte longue\nCathode (-) : patte courte, côté plat',
+                pinoutFolder: 'images/composants/led/_shared/brochage',
+                footprint: 'Espacement des pattes: 2.54mm (0.1")\nDiamètre du corps: 5mm',
+                footprintFolder: 'images/composants/led/_shared/empreinte',
+                formula: 'R = (Vcc - Vled) / I\nAvec Vled ≈ 2.2V et I = 20mA',
+                calculator: {
+                    variables: [
+                        {id: 'r', label: 'Résistance (R)', unit: 'Ω', default: 140, formula: '(vcc - vled) / i'},
+                        {id: 'vcc', label: 'Tension source (Vcc)', unit: 'V', default: 5, formula: '(r * i) + vled'},
+                        {id: 'i', label: 'Courant (I)', unit: 'A', default: 0.02, formula: '(vcc - vled) / r'},
+                        {id: 'vled', label: 'Tension LED (Vled)', unit: 'V', default: 2.2, fixed: true, formula: '0'}
+                    ]
+                }
+            },
+            {
+                id: 'led-blue',
+                name: 'LED bleue',
+                voltage: '3-3.5V',
+                current: '20 mA',
+                symbole: 'images/composants/led/_shared/symbole/symbole.png',
+                description: 'LED bleue haute luminosité, tension directe plus élevée.',
+                usage: 'Indicateurs, éclairage décoratif, affichage.',
+                pinout: 'Anode (+) : patte longue\nCathode (-) : patte courte, côté plat',
+                pinoutFolder: 'images/composants/led/_shared/brochage',
+                footprint: 'Espacement des pattes: 2.54mm (0.1")\nDiamètre du corps: 5mm',
+                footprintFolder: 'images/composants/led/_shared/empreinte',
+                formula: 'R = (Vcc - Vled) / I\nAvec Vled ≈ 3.2V et I = 20mA',
+                calculator: {
+                    variables: [
+                        {id: 'r', label: 'Résistance (R)', unit: 'Ω', default: 90, formula: '(vcc - vled) / i'},
+                        {id: 'vcc', label: 'Tension source (Vcc)', unit: 'V', default: 5, formula: '(r * i) + vled'},
+                        {id: 'i', label: 'Courant (I)', unit: 'A', default: 0.02, formula: '(vcc - vled) / r'},
+                        {id: 'vled', label: 'Tension LED (Vled)', unit: 'V', default: 3.2, fixed: true, formula: '0'}
+                    ]
+                }
+            },
+            {
+                id: 'led-yellow',
+                name: 'LED jaune',
+                voltage: '2-2.2V',
+                current: '20 mA',
+                symbole: 'images/composants/led/_shared/symbole/symbole.png',
+                description: 'LED jaune/ambre, parfaite pour les signaux d\'avertissement.',
+                usage: 'Signaux d\'alerte, indicateurs, feux de signalisation.',
+                pinout: 'Anode (+) : patte longue\nCathode (-) : patte courte, côté plat',
+                pinoutFolder: 'images/composants/led/_shared/brochage',
+                footprint: 'Espacement des pattes: 2.54mm (0.1")\nDiamètre du corps: 5mm',
+                footprintFolder: 'images/composants/led/_shared/empreinte',
+                formula: 'R = (Vcc - Vled) / I\nAvec Vled ≈ 2.1V et I = 20mA',
+                calculator: {
+                    variables: [
+                        {id: 'r', label: 'Résistance (R)', unit: 'Ω', default: 145, formula: '(vcc - vled) / i'},
+                        {id: 'vcc', label: 'Tension source (Vcc)', unit: 'V', default: 5, formula: '(r * i) + vled'},
+                        {id: 'i', label: 'Courant (I)', unit: 'A', default: 0.02, formula: '(vcc - vled) / r'},
+                        {id: 'vled', label: 'Tension LED (Vled)', unit: 'V', default: 2.1, fixed: true, formula: '0'}
+                    ]
+                }
+            },
+            {
+                id: 'led-white',
+                name: 'LED blanche',
+                voltage: '3-3.5V',
+                current: '20 mA',
+                symbole: 'images/composants/led/_shared/symbole/symbole.png',
+                description: 'LED blanche haute luminosité pour éclairage général.',
+                usage: 'Éclairage, lampe torche, rétroéclairage.',
+                pinout: 'Anode (+) : patte longue\nCathode (-) : patte courte, côté plat',
+                pinoutFolder: 'images/composants/led/_shared/brochage',
+                footprint: 'Espacement des pattes: 2.54mm (0.1")\nDiamètre du corps: 5mm',
+                footprintFolder: 'images/composants/led/_shared/empreinte',
+                formula: 'R = (Vcc - Vled) / I\nAvec Vled ≈ 3.2V et I = 20mA',
+                calculator: {
+                    variables: [
+                        {id: 'r', label: 'Résistance (R)', unit: 'Ω', default: 90, formula: '(vcc - vled) / i'},
+                        {id: 'vcc', label: 'Tension source (Vcc)', unit: 'V', default: 5, formula: '(r * i) + vled'},
+                        {id: 'i', label: 'Courant (I)', unit: 'A', default: 0.02, formula: '(vcc - vled) / r'},
+                        {id: 'vled', label: 'Tension LED (Vled)', unit: 'V', default: 3.2, fixed: true, formula: '0'}
+                    ]
+                }
+            }
+        ]
+    },
+    {
+        id: 'input',
+        name: 'Entrées',
+        icon: '🎛️',
+        description: 'Boutons, potentiomètres et commandes',
+        components: [
+            {
+                id: 'push-button',
+                name: 'Bouton poussoir',
+                voltage: '12V max',
+                current: '50 mA',
+                symbole: 'images/composants/Entrees/push-button/symbole/symbole.png',
+                description: 'Bouton tactile momentané, se ferme quand appuyé, s\'ouvre au relâchement.',
+                usage: 'Commandes, menus, interactions utilisateur. Nécessite une résistance de pull-up ou pull-down (10kΩ).',
+                pinout: 'Borne 1A et 1B : connectées ensemble\nBorne 2A et 2B : connectées ensemble\nCircuit ouvert au repos, fermé quand appuyé',
+                pinoutFolder: 'images/composants/Entrees/push-button/brochage',
+                footprint: 'Bouton 6×6mm : espacement 2.54mm\nBouton 12×12mm : espacement 5mm',
+                footprintFolder: 'images/composants/Entrees/push-button/empreinte',
+                code: 'const int buttonPin = 2;\npinMode(buttonPin, INPUT_PULLUP); // Pull-up interne\nint state = digitalRead(buttonPin); // LOW si appuyé\nif (state == LOW) { /* Action */ }'
+            },
+            {
+                id: 'potentiometer',
+                name: 'Potentiomètre 10kΩ',
+                voltage: '5V',
+                resistance: '10kΩ',
+                symbole: 'images/composants/Entrees/potentiometer/symbole/symbole.png',
+                description: 'Résistance variable à 3 broches pour contrôle analogique précis.',
+                usage: 'Réglage de volume, luminosité, vitesse moteur, seuils. Entrée analogique 0-1023.',
+                pinout: 'VCC : alimentation (+5V)\nGND : masse (0V)\nOUT : curseur variable (broche centrale)',
+                pinoutFolder: 'images/composants/Entrees/potentiometer/brochage',
+                footprint: 'Type linéaire : 9mm de diamètre\nEspacement des pattes: 5mm',
+                footprintFolder: 'images/composants/Entrees/potentiometer/empreinte',
+                formula: 'Vout = (Position / 1023) × Vcc',
+                calculator: {
+                    variables: [
+                        {id: 'vout', label: 'Tension sortie (Vout)', unit: 'V', default: 2.5, formula: '(position / 1023) * vcc'},
+                        {id: 'position', label: 'Position ADC (0-1023)', unit: '', default: 512, formula: '(vout / vcc) * 1023'},
+                        {id: 'vcc', label: 'Tension source (Vcc)', unit: 'V', default: 5, formula: 'vout / (position / 1023)'}
+                    ]
+                },
+                code: 'int potPin = A0;\nint value = analogRead(potPin); // 0-1023\nint mapped = map(value, 0, 1023, 0, 255); // Conversion 0-255'
+            }
+        ]
+    },
+    {
+        id: 'audio',
+        name: 'Audio',
+        icon: '🔊',
+        description: 'Buzzers et haut-parleurs',
+        components: [
+            {
+                id: 'buzzer-active',
+                name: 'Buzzer actif',
+                voltage: '3.5-5V',
+                frequency: 'Fixe (~2kHz)',
+                symbole: 'images/composants/Audio/buzzer-active/symbole/symbole.png',
+                description: 'Buzzer avec oscillateur intégré, émet un son fixe quand alimenté.',
+                usage: 'Alarmes, notifications simples, bips. Brancher directement sur une sortie digitale.',
+                pinout: '+ (long/marqué rouge) : signal 5V\n- (court) : GND',
+                pinoutFolder: 'images/composants/Audio/buzzer-active/brochage',
+                footprint: 'Diamètre: 12mm\nHauteur: 9.5mm',
+                footprintFolder: 'images/composants/Audio/buzzer-active/empreinte',
+                code: 'int buzzerPin = 8;\npinMode(buzzerPin, OUTPUT);\ndigitalWrite(buzzerPin, HIGH); // Son ON\ndelay(1000);\ndigitalWrite(buzzerPin, LOW); // Son OFF'
+            },
+            {
+                id: 'buzzer-passive',
+                name: 'Buzzer passif',
+                voltage: '3-5V',
+                frequency: 'Variable (contrôlable)',
+                symbole: 'images/composants/Audio/buzzer-passive/symbole/symbole.png',
+                description: 'Buzzer sans oscillateur, nécessite un signal PWM pour générer différentes fréquences.',
+                usage: 'Mélodies, notes de musique, alarmes variables. Utiliser tone() pour contrôler la fréquence.',
+                pinout: '+ (marqué) : signal PWM\n- : GND',
+                pinoutFolder: 'images/composants/Audio/buzzer-passive/brochage',
+                footprint: 'Diamètre: 12mm\nHauteur: 9.5mm',
+                footprintFolder: 'images/composants/Audio/buzzer-passive/empreinte',
+                formula: 'Fréquence (Hz) = Note musicale\nDo : 262Hz, Ré : 294Hz, Mi : 330Hz...',
+                code: 'int buzzerPin = 8;\ntone(buzzerPin, 1000); // 1000 Hz\ndelay(500);\nnoTone(buzzerPin); // Arrêt\n// Mélodie: tone(buzzerPin, 262, 250); // Do pendant 250ms'
             }
         ]
     },
@@ -215,28 +521,7 @@ const componentCategories = [
         name: 'Résistances',
         icon: '⚡',
         description: 'Composants passifs limitant le courant',
-        components: [
-            {
-                id: 'resistor-220',
-                name: 'Résistance 220Ω',
-                tolerance: '±5%',
-                power: '0.25W',
-                colorCode: 'Rouge-Rouge-Marron-Or',
-                description: 'Résistance très courante, idéale pour limiter le courant des LED avec Arduino (5V).',
-                usage: 'Protection LED, pull-up/pull-down, diviseur de tension.',
-                formula: 'I = V / R = 5V / 220Ω = 22.7 mA\nP = V² / R = 25 / 220 = 0.114W (OK pour 0.25W)'
-            },
-            {
-                id: 'resistor-10k',
-                name: 'Résistance 10kΩ',
-                tolerance: '±5%',
-                power: '0.25W',
-                colorCode: 'Marron-Noir-Orange-Or',
-                description: 'Résistance de pull-up/pull-down standard pour boutons et switches.',
-                usage: 'Pull-up/pull-down pour boutons, diviseur de tension, protection d\'entrées.',
-                formula: 'I (pull-up à 5V) = V / R = 5V / 10kΩ = 0.5 mA'
-            }
-        ]
+        components: generateStandardResistors()
     },
     {
         id: 'capacitor',
@@ -249,22 +534,38 @@ const componentCategories = [
                 name: 'Condensateur céramique 100nF',
                 voltage: '50V',
                 type: 'Céramique',
+                symbole: 'images/composants/Condensateurs/cap-100n/symbole/symbole.png',
                 description: 'Condensateur de découplage/filtrage très utilisé en électronique numérique.',
                 usage: 'Filtrage alimentation, découplage IC, anti-rebond bouton. Placer au plus près des broches VCC/GND des circuits intégrés.',
-                formula: 'Fréquence de coupure (avec R=1kΩ): fc = 1/(2πRC) = 1/(2π × 1000 × 100e-9) = 1.59 kHz'
+                pinout: 'Pas de polarité : peut se brancher dans les deux sens\nPatte 1 : borne\nPatte 2 : borne',
+                pinoutFolder: 'images/composants/Condensateurs/cap-100n/brochage',
+                footprint: 'Espacement des pattes: 2.54mm ou 5.08mm\nDimensions: 4-6mm largeur',
+                footprintFolder: 'images/composants/Condensateurs/cap-100n/empreinte',
+                formula: 'Fréquence de coupure: fc = 1 / (2πRC)\nAvec C = 100nF',
+                calculator: {
+                    inputs: [{id: 'r', label: 'Résistance (kΩ)', default: 10}],
+                    calc: '1 / (2 * 3.14159 * r * 1000 * 100e-9)',
+                    result: 'Fréquence de coupure: {result} Hz'
+                }
             },
             {
                 id: 'cap-1000u',
                 name: 'Condensateur électrolytique 1000µF',
                 voltage: '16V ou 25V',
                 type: 'Électrolytique (polarisé)',
+                symbole: 'images/composants/Condensateurs/cap-1000u/symbole/symbole.png',
                 description: 'Grand condensateur pour filtrage et réservoir d\'énergie. ATTENTION : polarisé !',
                 usage: 'Filtrage alimentation, réservoir d\'énergie, lissage tension. Respecter la polarité : + vers VCC, - vers GND.',
                 pinout: 'Patte longue : + (positif)\nPatte courte : - (négatif, souvent marqué par une bande)',
                 pinoutFolder: 'images/composants/Condensateurs/cap-1000u/brochage',
                 footprint: 'Diamètre: 6.3-8mm\nEspacement des pattes: 2.5mm\nHauteur: 11-13mm',
-                footprintFolder: 'images/composants/Condensateurs/cap-1000u/empatement',
-                formula: 'Énergie stockée: E = 0.5 × C × V² = 0.5 × 0.001 × 16² = 0.128 J'
+                footprintFolder: 'images/composants/Condensateurs/cap-1000u/empreinte',
+                formula: 'Énergie stockée: E = 0.5 × C × V²\nAvec C = 1000µF = 0.001F',
+                calculator: {
+                    inputs: [{id: 'v', label: 'Tension (V)', default: 16}],
+                    calc: '0.5 * 0.001 * v * v',
+                    result: 'Énergie stockée: {result} J'
+                }
             }
         ]
     },
@@ -280,13 +581,35 @@ const componentCategories = [
                 voltage: '3.3-5V',
                 range: 'Température: 0-50°C, Humidité: 20-80%',
                 accuracy: '±2°C, ±5%',
+                symbole: 'images/composants/Capteurs/dht11/symbole/symbole.png',
                 description: 'Capteur numérique de température et humidité, très populaire et bon marché.',
                 usage: 'Station météo, monitoring environnemental, régulation climatique. Nécessite la bibliothèque DHT.',
                 pinout: 'VCC : 3.3V ou 5V\nDATA : broche numérique (avec pull-up 10kΩ)\nGND : masse',
                 pinoutFolder: 'images/composants/Capteurs/dht11/brochage',
                 footprint: 'Module: 15.5 × 12 × 5.5mm\nEspacement des pattes: 2.54mm',
-                footprintFolder: 'images/composants/Capteurs/dht11/empatement',
+                footprintFolder: 'images/composants/Capteurs/dht11/empreinte',
+                formula: 'Protocole série 1-wire\nRésistance pull-up : R = 4.7kΩ à 10kΩ\nTemps de lecture : ~250ms minimum entre mesures',
                 code: '#include <DHT.h>\nDHT dht(PIN, DHT11);\nvoid setup() { dht.begin(); }\nfloat t = dht.readTemperature();\nfloat h = dht.readHumidity();'
+            },
+            {
+                id: 'ldr',
+                name: 'Photorésistance (LDR)',
+                voltage: '5V max',
+                resistance: '1kΩ - 1MΩ (selon lumière)',
+                symbole: 'images/composants/Capteurs/ldr/symbole/symbole.png',
+                description: 'Capteur de lumière dont la résistance varie selon l\'intensité lumineuse.',
+                usage: 'Détection jour/nuit, allumage automatique, photomètre. Utiliser en diviseur de tension avec une résistance fixe.',
+                pinout: 'Pas de polarité : peut se brancher dans les deux sens',
+                pinoutFolder: 'images/composants/Capteurs/ldr/brochage',
+                footprint: 'Diamètre: 5mm\nEspacement des pattes: variable',
+                footprintFolder: 'images/composants/Capteurs/ldr/empreinte',
+                formula: 'Diviseur de tension: Vout = Vcc × R / (R + RLDR)',
+                calculator: {
+                    inputs: [{id: 'vcc', label: 'Tension source (V)', default: 5}, {id: 'r', label: 'Résistance fixe (kΩ)', default: 10}, {id: 'rldr', label: 'Résistance LDR (kΩ)', default: 5}],
+                    calc: 'vcc * r / (r + rldr)',
+                    result: 'Tension sortie: {result} V'
+                },
+                code: 'int ldrPin = A0;\nint value = analogRead(ldrPin); // 0-1023\nfloat voltage = value * (5.0 / 1023.0);'
             },
             {
                 id: 'hcsr04',
@@ -294,12 +617,19 @@ const componentCategories = [
                 voltage: '5V',
                 range: '2-400 cm',
                 accuracy: '±3mm',
+                symbole: 'images/composants/Capteurs/hcsr04/symbole/symbole.png',
                 description: 'Capteur de distance à ultrasons très précis et abordable.',
                 usage: 'Mesure de distance, détection d\'obstacles, robot autonome, stationnement.',
                 pinout: 'VCC : 5V\nTrig : broche numérique (envoi impulsion)\nEcho : broche numérique (réception)\nGND : masse',
                 pinoutFolder: 'images/composants/Capteurs/hcsr04/brochage',
                 footprint: 'Module: 45 × 20 × 15mm\nCapteurs espacés de 26mm',
-                footprintFolder: 'images/composants/Capteurs/hcsr04/empatement',
+                footprintFolder: 'images/composants/Capteurs/hcsr04/empreinte',
+                formula: 'Distance (cm) = (Durée × Vitesse_son) / 2\nVitesse du son = 340 m/s = 0.034 cm/μs\nDiviser par 2 car aller-retour',
+                calculator: {
+                    inputs: [{id: 'duree', label: 'Durée (μs)', default: 1000}],
+                    calc: 'duree * 0.034 / 2',
+                    result: 'Distance: {result} cm'
+                },
                 code: 'digitalWrite(trig, HIGH);\ndelayMicroseconds(10);\ndigitalWrite(trig, LOW);\nlong duration = pulseIn(echo, HIGH);\nint distance = duration * 0.034 / 2;'
             }
         ]
@@ -316,12 +646,19 @@ const componentCategories = [
                 voltage: '4.8-6V',
                 torque: '1.8 kg·cm à 4.8V',
                 angle: '0-180°',
+                symbole: 'images/composants/Actionneurs/sg90/symbole/symbole.png',
                 description: 'Petit servomoteur très populaire, précis et abordable pour les projets Arduino.',
                 usage: 'Robotique, bras articulé, volet motorisé, direction RC. Signal PWM 50Hz (20ms), impulsions 1-2ms.',
                 pinout: 'Marron/Noir : GND\nRouge : VCC (5V externe recommandé)\nOrange/Jaune : Signal PWM',
                 pinoutFolder: 'images/composants/Actionneurs/sg90/brochage',
                 footprint: 'Corps: 22.5 × 12 × 29mm\nFixes: 32mm entre trous de montage',
-                footprintFolder: 'images/composants/Actionneurs/sg90/empatement',
+                footprintFolder: 'images/composants/Actionneurs/sg90/empreinte',
+                formula: 'Durée (ms) = 1 + (Angle / 180)\nFréquence : 50Hz (période 20ms)',
+                calculator: {
+                    inputs: [{id: 'angle', label: 'Angle (0-180°)', default: 90}],
+                    calc: '1 + (angle / 180)',
+                    result: 'Durée impulsion: {result} ms'
+                },
                 code: '#include <Servo.h>\nServo servo;\nvoid setup() { servo.attach(9); }\nservo.write(90); // Position 90°'
             },
             {
@@ -329,13 +666,21 @@ const componentCategories = [
                 name: 'Relais 5V 10A',
                 voltage: '5V (bobine)',
                 current: '10A max (contact)',
+                symbole: 'images/composants/Actionneurs/relay-5v/symbole/symbole.png',
                 description: 'Relais électromécanique permettant de contrôler des charges AC/DC puissantes.',
                 usage: 'Domotique, contrôle de lampes 220V, moteurs puissants, électrovannes. DANGER : 220V !',
                 pinout: 'VCC : 5V\nGND : masse\nIN : signal de commande (LOW = activé)\nCOM, NO, NC : contacts de puissance',
                 pinoutFolder: 'images/composants/Actionneurs/relay-5v/brochage',
                 footprint: 'Module: 50 × 26 × 18mm\nBorniers à vis pour haute tension',
-                footprintFolder: 'images/composants/Actionneurs/relay-5v/empatement',
-                warning: '⚠️ ATTENTION : Manipuler avec précaution, risque électrique 220V AC !'
+                footprintFolder: 'images/composants/Actionneurs/relay-5v/empreinte',
+                formula: 'Courant bobine : I = V / R\nPuissance commutée : P = V × I',
+                calculator: {
+                    inputs: [{id: 'v', label: 'Tension charge (V)', default: 220}, {id: 'i', label: 'Courant charge (A)', default: 1}],
+                    calc: 'v * i',
+                    result: 'Puissance commutée: {result} W'
+                },
+                warning: '⚠️ ATTENTION : Manipuler avec précaution, risque électrique 220V AC !',
+                code: 'digitalWrite(relayPin, LOW); // Activer\ndelay(1000);\ndigitalWrite(relayPin, HIGH); // Désactiver'
             }
         ]
     },
@@ -350,13 +695,15 @@ const componentCategories = [
                 name: '74HC595 Registre à décalage',
                 voltage: '2-6V',
                 outputs: '8 sorties',
+                symbole: 'images/composants/Circuits-Integres/74hc595/symbole/symbole.png',
                 description: 'Registre à décalage permettant d\'étendre les sorties numériques avec seulement 3 broches.',
                 usage: 'Multiplexage LED, afficheurs 7 segments, expansion GPIO. Cascadable.',
-                pinout: 'DS (14) : données série\nSHCP (11) : horloge shift\nSTCP (12) : horloge stockage (latch)\nQ0-Q7 : sorties parallèles',
+                pinout: 'DS (14) : données série\nSHCP (11) : horloge shift\nSTCP (12) : horloge stockage (latch)\nOE (13) : Output Enable (actif LOW)\nMR (10) : Master Reset (actif LOW)\nQ0-Q7 (15,1-7) : sorties parallèles\nQ7\' (9) : sortie série (cascade)\nVCC (16) : alimentation\nGND (8) : masse',
                 pinoutFolder: 'images/composants/Circuits-Integres/74hc595/brochage',
-                footprint: 'Boîtier DIP-16\nEspacement des pattes: 2.54mm\nLargeur: 7.62mm',
-                footprintFolder: 'images/composants/Circuits-Integres/74hc595/empatement',
-                code: 'shiftOut(dataPin, clockPin, MSBFIRST, value);\ndigitalWrite(latchPin, HIGH);'
+                footprint: 'Boîtier DIP-16\nEspacement des pattes: 2.54mm\nLargeur: 7.62mm\nLongueur: 19.5mm',
+                footprintFolder: 'images/composants/Circuits-Integres/74hc595/empreinte',
+                formula: 'Nombre de sorties avec N registres : Sorties = 8 × N\nConsommation : ~80 µA par MHz',
+                code: 'int latchPin = 8;\nint clockPin = 12;\nint dataPin = 11;\n\nvoid setup() {\n  pinMode(latchPin, OUTPUT);\n  pinMode(clockPin, OUTPUT);\n  pinMode(dataPin, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(latchPin, LOW);\n  shiftOut(dataPin, clockPin, MSBFIRST, 0b10101010);\n  digitalWrite(latchPin, HIGH);\n}'
             }
         ]
     }
@@ -923,16 +1270,89 @@ function showBoardDetail(boardId) {
 // --- COMPOSANTS ---
 function renderComponentCategories() {
     const list = document.getElementById('component-categories');
-    list.innerHTML = componentCategories.map(cat => `
-        <div class="folder-item" onclick="showComponentList('${cat.id}')" style="border-left: 5px solid var(--accent);">
-            <div class="folder-thumb" style="font-size:28px;">${cat.icon}</div>
-            <div style="flex:1">
-                <b>${cat.name}</b><br>
-                <span style="font-size:11px; opacity:0.6;">${cat.description}</span>
+    list.innerHTML = `
+        <div id="categories-section">
+            <h3 style="color:var(--accent); margin:0 20px 15px 20px; font-size:16px;">📂 Catégories</h3>
+            <div id="categories-list">
+                ${componentCategories.map(cat => `
+                    <div class="folder-item category-item" data-category-id="${cat.id}" data-category-name="${cat.name.toLowerCase()}" data-category-desc="${cat.description.toLowerCase()}" onclick="showComponentList('${cat.id}')" style="border-left: 5px solid var(--accent);">
+                        <div class="folder-thumb" style="font-size:28px;">${cat.icon}</div>
+                        <div style="flex:1">
+                            <b>${cat.name}</b><br>
+                            <span style="font-size:11px; opacity:0.6;">${cat.description}</span>
+                        </div>
+                        <span style="font-size:18px;">→</span>
+                    </div>
+                `).join('')}
             </div>
-            <span style="font-size:18px;">→</span>
         </div>
-    `).join('');
+        <div id="components-section" style="display:none;">
+            <h3 style="color:var(--accent); margin:20px 20px 15px 20px; font-size:16px;">⚡ Composants</h3>
+            <div id="components-results"></div>
+        </div>
+    `;
+}
+
+function filterComponentCategories(searchTerm) {
+    const term = searchTerm.toLowerCase().trim();
+    const categoriesSection = document.getElementById('categories-section');
+    const componentsSection = document.getElementById('components-section');
+    const categoryItems = document.querySelectorAll('.category-item');
+    const componentsResults = document.getElementById('components-results');
+    
+    if (term === '') {
+        // Afficher toutes les catégories, masquer les composants
+        categoryItems.forEach(item => item.style.display = 'flex');
+        componentsSection.style.display = 'none';
+        return;
+    }
+    
+    // Filtrer les catégories
+    let hasVisibleCategories = false;
+    categoryItems.forEach(item => {
+        const categoryName = item.getAttribute('data-category-name');
+        const categoryDesc = item.getAttribute('data-category-desc');
+        
+        if (categoryName.includes(term) || categoryDesc.includes(term)) {
+            item.style.display = 'flex';
+            hasVisibleCategories = true;
+        } else {
+            item.style.display = 'none';
+        }
+    });
+    
+    // Chercher dans tous les composants
+    let matchingComponents = [];
+    componentCategories.forEach(cat => {
+        cat.components.forEach(comp => {
+            const compName = comp.name.toLowerCase();
+            const compVoltage = (comp.voltage || comp.type || '').toLowerCase();
+            
+            if (compName.includes(term) || compVoltage.includes(term)) {
+                matchingComponents.push({
+                    category: cat,
+                    component: comp
+                });
+            }
+        });
+    });
+    
+    // Afficher les composants trouvés
+    if (matchingComponents.length > 0) {
+        componentsSection.style.display = 'block';
+        componentsResults.innerHTML = matchingComponents.map(item => `
+            <div class="folder-item" onclick="showComponentDetail('${item.category.id}', '${item.component.id}')" style="border-left: 5px solid var(--primary); margin:0 20px 10px 20px;">
+                <div class="folder-thumb" style="font-size:24px;">${item.category.icon}</div>
+                <div style="flex:1">
+                    <b>${item.component.name}</b><br>
+                    <span style="font-size:11px; opacity:0.6;">${item.category.name} • ${item.component.voltage || item.component.type || ''}</span>
+                </div>
+                <span style="font-size:18px;">→</span>
+            </div>
+        `).join('');
+    } else {
+        componentsSection.style.display = 'none';
+    }
 }
 
 function showComponentList(categoryId) {
@@ -941,7 +1361,7 @@ function showComponentList(categoryId) {
     
     document.getElementById('component-list-title').innerText = category.name;
     document.getElementById('component-list-content').innerHTML = category.components.map(comp => `
-        <div class="folder-item" onclick="showComponentDetail('${categoryId}', '${comp.id}')" style="border-left: 5px solid var(--primary);">
+        <div class="folder-item component-item" data-comp-name="${comp.name.toLowerCase()}" data-comp-voltage="${(comp.voltage || comp.type || '').toLowerCase()}" onclick="showComponentDetail('${categoryId}', '${comp.id}')" style="border-left: 5px solid var(--primary);">
             <div class="folder-thumb" style="font-size:24px;">${category.icon}</div>
             <div style="flex:1">
                 <b>${comp.name}</b><br>
@@ -951,7 +1371,27 @@ function showComponentList(categoryId) {
         </div>
     `).join('');
     
+    // Réinitialiser le champ de recherche
+    const searchInput = document.getElementById('component-list-search');
+    if (searchInput) searchInput.value = '';
+    
     openModal('modal-component-list');
+}
+
+function filterComponentList(searchTerm) {
+    const items = document.querySelectorAll('.component-item');
+    const term = searchTerm.toLowerCase().trim();
+    
+    items.forEach(item => {
+        const compName = item.getAttribute('data-comp-name');
+        const compVoltage = item.getAttribute('data-comp-voltage');
+        
+        if (term === '' || compName.includes(term) || compVoltage.includes(term)) {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = 'none';
+        }
+    });
 }
 
 function showComponentDetail(categoryId, componentId) {
@@ -970,7 +1410,22 @@ function showComponentDetail(categoryId, componentId) {
             <h3 style="color:var(--accent); margin-top:0;">📋 Description</h3>
             <p>${component.description}</p>
         </div>
-
+    `;
+    
+    // Symbole électronique
+    if (component.symbole) {
+        detailHTML += `
+        <div class="card">
+            <h3 style="color:var(--accent); margin-top:0;">🔌 Symbole électronique</h3>
+            <div style="text-align:center; background:#0f172a; padding:20px; border-radius:10px;">
+                <img src="${component.symbole}" alt="Symbole ${component.name}" 
+                     style="max-width:100%; max-height:200px; object-fit:contain;" 
+                     onerror="this.parentElement.innerHTML='<p style=color:#94a3b8;>Image non disponible</p>';">
+            </div>
+        </div>`;
+    }
+    
+    detailHTML += `
         <div class="card">
             <h3 style="color:var(--accent); margin-top:0;">⚙️ Caractéristiques</h3>
             <table style="width:100%; font-size:14px; line-height:1.8;">
@@ -1015,8 +1470,10 @@ function showComponentDetail(categoryId, componentId) {
             ];
             pinoutImages.forEach((imgName, index) => {
                 detailHTML += `
-                <div style="text-align:center; margin:15px 0;">
-                    <p style="font-size:12px; color:var(--accent); margin-bottom:8px;">${imgName.replace('.png', '').replace(/-/g, ' ')}</p>
+                <div style="text-align:center; margin:20px 0;">
+                    <div style="font-size:16px; font-weight:600; color:var(--accent); margin-bottom:12px; padding:8px 16px; background:rgba(59, 130, 246, 0.1); border-radius:6px; display:inline-block;">
+                        📄 ${cleanImageName(imgName)}
+                    </div>
                     <img src="${component.pinoutFolder}/${imgName}" 
                          alt="${imgName}" 
                          style="max-width:100%; border-radius:8px; display:block; margin:0 auto;"
@@ -1032,11 +1489,11 @@ function showComponentDetail(categoryId, componentId) {
         detailHTML += `</div>`;
     }
     
-    // Empatement (Footprint)
+    // Empreinte (Footprint)
     if (component.footprint || component.footprintFolder) {
         detailHTML += `
         <div class="card">
-            <h3 style="color:var(--accent); margin-top:0;">📐 Empatement (Footprint)</h3>`;
+            <h3 style="color:var(--accent); margin-top:0;">📐 Empreinte (Footprint)</h3>`;
         
         // Afficher les images du dossier si disponible
         if (component.footprintFolder) {
@@ -1049,8 +1506,10 @@ function showComponentDetail(categoryId, componentId) {
             ];
             footprintImages.forEach((imgName, index) => {
                 detailHTML += `
-                <div style="text-align:center; margin:15px 0;">
-                    <p style="font-size:12px; color:var(--accent); margin-bottom:8px;">${imgName.replace('.png', '').replace(/-/g, ' ')}</p>
+                <div style="text-align:center; margin:20px 0;">
+                    <div style="font-size:16px; font-weight:600; color:var(--accent); margin-bottom:12px; padding:8px 16px; background:rgba(59, 130, 246, 0.1); border-radius:6px; display:inline-block;">
+                        📐 ${cleanImageName(imgName)}
+                    </div>
                     <img src="${component.footprintFolder}/${imgName}" 
                          alt="${imgName}" 
                          style="max-width:100%; border-radius:8px; display:block; margin:0 auto;"
@@ -1069,27 +1528,43 @@ function showComponentDetail(categoryId, componentId) {
     if (component.formula) {
         detailHTML += `
         <div class="card">
-            <h3 style="color:var(--accent); margin-top:0;">🧮 Formules</h3>
+            <h3 style="color:var(--accent); margin-top:0;">🧮 Formules & Calculs</h3>
             <pre style="background:#0f172a; padding:15px; border-radius:8px; font-size:12px; line-height:1.6; white-space:pre-wrap;">${component.formula}</pre>`;
         
         // Ajouter calculateur interactif si disponible
-        if (component.calculator) {
+        if (component.calculator && component.calculator.variables) {
             detailHTML += `
             <div style="margin-top:15px; padding:15px; background:#1e293b; border-radius:8px;">
-                <h4 style="margin:0 0 10px 0; color:var(--primary);">⚡ Calculateur</h4>`;
-            
-            component.calculator.inputs.forEach(input => {
-                detailHTML += `
-                <label style="display:block; margin:10px 0; font-size:13px;">
-                    ${input.label}
-                    <input type="number" id="calc-${componentId}-${input.id}" value="${input.default}" 
-                           style="width:100%; padding:8px; margin-top:5px; background:#0f172a; border:1px solid #334155; border-radius:5px; color:white;"
-                           oninput="calculateComponent('${categoryId}', '${componentId}')">
-                </label>`;
-            });
-            
+                <h4 style="margin:0 0 15px 0; color:var(--primary);">⚡ Calculateur interactif</h4>
+                
+                <label style="display:block; margin-bottom:15px; font-size:14px; font-weight:bold;">
+                    Je cherche :
+                    <select id="calc-target-${componentId}" 
+                            style="width:100%; padding:10px; margin-top:5px; background:#0f172a; border:1px solid #334155; border-radius:5px; color:white; font-size:14px;"
+                            onchange="updateCalculatorInputs('${categoryId}', '${componentId}')">
+                        ${component.calculator.variables.map(v => `<option value="${v.id}">${v.label}</option>`).join('')}
+                    </select>
+                </label>
+                
+                <div id="calc-inputs-${componentId}" style="display:grid; gap:10px; margin-bottom:15px;"></div>
+                
+                <div id="calc-result-${componentId}" style="padding:12px; background:#0f172a; border-radius:5px; border-left:4px solid var(--accent); font-weight:bold; font-size:15px; color:var(--accent);"></div>
+            </div>`;
+        } else if (component.calculator && component.calculator.inputs) {
+            // Ancien format de calculateur (pour condensateurs, etc.)
             detailHTML += `
-                <div id="calc-result-${componentId}" style="margin-top:15px; padding:10px; background:#0f172a; border-radius:5px; font-weight:bold; color:var(--accent);"></div>
+            <div style="margin-top:15px; padding:15px; background:#1e293b; border-radius:8px;">
+                <h4 style="margin:0 0 15px 0; color:var(--primary);">⚡ Calculateur</h4>
+                ${component.calculator.inputs.map(input => `
+                    <label style="display:block; margin-bottom:10px; font-size:13px;">
+                        ${input.label}
+                        <input type="number" step="any" value="${input.default}" 
+                               style="width:100%; padding:8px; margin-top:5px; background:#0f172a; border:1px solid #334155; border-radius:5px; color:white; font-size:14px;">
+                    </label>
+                `).join('')}
+                <div style="padding:12px; background:#0f172a; border-radius:5px; border-left:4px solid var(--accent); font-weight:bold; font-size:15px; color:var(--accent); margin-top:10px;">
+                    Résultat : Calculateur simple
+                </div>
             </div>`;
         }
         
@@ -1115,10 +1590,44 @@ function showComponentDetail(categoryId, componentId) {
     document.getElementById('component-detail-content').innerHTML = detailHTML;
     openModal('modal-component-detail');
     
-    // Calculer immédiatement si un calculateur existe
+    // Initialiser le calculateur si disponible
     if (component.calculator) {
-        calculateComponent(categoryId, componentId);
+        updateCalculatorInputs(categoryId, componentId);
     }
+}
+
+// Mettre à jour les inputs du calculateur selon la variable cherchée
+function updateCalculatorInputs(categoryId, componentId) {
+    const category = componentCategories.find(c => c.id === categoryId);
+    if (!category) return;
+    const component = category.components.find(c => c.id === componentId);
+    if (!component || !component.calculator || !component.calculator.variables) return;
+    
+    const targetSelect = document.getElementById(`calc-target-${componentId}`);
+    const inputsDiv = document.getElementById(`calc-inputs-${componentId}`);
+    if (!targetSelect || !inputsDiv) return;
+    
+    const targetVar = targetSelect.value;
+    const targetVariable = component.calculator.variables.find(v => v.id === targetVar);
+    if (!targetVariable) return;
+    
+    // Générer les inputs pour les autres variables
+    inputsDiv.innerHTML = '';
+    component.calculator.variables.forEach(variable => {
+        if (variable.id === targetVar) return; // Skip la variable cherchée
+        
+        const isFixed = variable.fixed || false;
+        inputsDiv.innerHTML += `
+        <label style="display:flex; align-items:center; gap:10px; font-size:13px;">
+            <span style="min-width:150px; color:${isFixed ? '#94a3b8' : 'white'};">${variable.label}${isFixed ? ' (fixe)' : ''} :</span>
+            <input type="number" step="any" id="calc-input-${componentId}-${variable.id}" value="${variable.default}" 
+                   ${isFixed ? 'readonly' : ''}
+                   style="flex:1; padding:8px; background:${isFixed ? '#1e293b' : '#0f172a'}; border:1px solid #334155; border-radius:5px; color:${isFixed ? '#94a3b8' : 'white'}; font-size:14px;"
+                   oninput="calculateComponent('${categoryId}', '${componentId}')">
+        </label>`;
+    });
+    
+    calculateComponent(categoryId, componentId);
 }
 
 // Fonction pour calculer les valeurs du composant
@@ -1126,29 +1635,57 @@ function calculateComponent(categoryId, componentId) {
     const category = componentCategories.find(c => c.id === categoryId);
     if (!category) return;
     const component = category.components.find(c => c.id === componentId);
-    if (!component || !component.calculator) return;
+    if (!component || !component.calculator || !component.calculator.variables) return;
+    
+    const targetSelect = document.getElementById(`calc-target-${componentId}`);
+    const resultDiv = document.getElementById(`calc-result-${componentId}`);
+    if (!targetSelect || !resultDiv) return;
+    
+    const targetVar = targetSelect.value;
+    const targetVariable = component.calculator.variables.find(v => v.id === targetVar);
+    if (!targetVariable) return;
     
     // Récupérer les valeurs des inputs
     const values = {};
-    component.calculator.inputs.forEach(input => {
-        const elem = document.getElementById(`calc-${componentId}-${input.id}`);
+    component.calculator.variables.forEach(variable => {
+        if (variable.id === targetVar) return;
+        const elem = document.getElementById(`calc-input-${componentId}-${variable.id}`);
         if (elem) {
-            values[input.id] = parseFloat(elem.value) || 0;
+            values[variable.id] = parseFloat(elem.value) || 0;
         }
     });
     
-    // Calculer le résultat
+    // Calculer le résultat avec la formule de la variable cible
     try {
-        const result = eval(component.calculator.calc.replace(/(\w+)/g, (match) => {
-            return values[match] !== undefined ? values[match] : match;
-        }));
-        
-        const resultText = component.calculator.result.replace('{result}', result.toFixed(2));
-        const resultElem = document.getElementById(`calc-result-${componentId}`);
-        if (resultElem) {
-            resultElem.innerText = resultText;
+        let calcFormula = targetVariable.formula;
+        if (!calcFormula || calcFormula === '0') {
+            resultDiv.innerHTML = `${targetVariable.label} : Valeur fixe`;
+            return;
         }
+        
+        // Remplacer les variables par leurs valeurs
+        Object.keys(values).forEach(varId => {
+            const regex = new RegExp(`\\b${varId}\\b`, 'g');
+            calcFormula = calcFormula.replace(regex, values[varId]);
+        });
+        
+        const result = eval(calcFormula);
+        
+        // Formater le résultat
+        let displayResult = result;
+        if (!isNaN(result)) {
+            if (result > 1000000) {
+                displayResult = (result / 1000000).toFixed(2) + 'M';
+            } else if (result > 1000) {
+                displayResult = (result / 1000).toFixed(2) + 'k';
+            } else {
+                displayResult = result.toFixed(3);
+            }
+        }
+        
+        resultDiv.innerHTML = `${targetVariable.label} = <span style="font-size:18px;">${displayResult} ${targetVariable.unit || ''}</span>`;
     } catch (error) {
+        resultDiv.innerHTML = `Erreur de calcul`;
         console.error('Erreur calcul:', error);
     }
 }
@@ -1238,11 +1775,11 @@ function openFolder(i) {
     // Photo du projet final
     if(f.img) {
         document.getElementById('proj-img-preview').src = f.img;
-        document.getElementById('proj-img-preview').style.display = 'block';
+        document.getElementById('proj-img-container').style.display = 'block';
         document.getElementById('proj-img-label').style.display = 'none';
         document.getElementById('proj-img-actions').style.display = 'flex';
     } else {
-        document.getElementById('proj-img-preview').style.display = 'none';
+        document.getElementById('proj-img-container').style.display = 'none';
         document.getElementById('proj-img-label').style.display = 'block';
         document.getElementById('proj-img-actions').style.display = 'none';
     }
@@ -1250,11 +1787,11 @@ function openFolder(i) {
     // Schéma de principe
     if(f.schemaPrincipe) {
         document.getElementById('schema-principe-preview').src = f.schemaPrincipe;
-        document.getElementById('schema-principe-preview').style.display = 'block';
+        document.getElementById('schema-principe-container').style.display = 'block';
         document.getElementById('schema-principe-label').style.display = 'none';
         document.getElementById('schema-principe-actions').style.display = 'flex';
     } else {
-        document.getElementById('schema-principe-preview').style.display = 'none';
+        document.getElementById('schema-principe-container').style.display = 'none';
         document.getElementById('schema-principe-label').style.display = 'block';
         document.getElementById('schema-principe-actions').style.display = 'none';
     }
@@ -1262,11 +1799,11 @@ function openFolder(i) {
     // Schéma Proteus
     if(f.schemaProteus) {
         document.getElementById('schema-proteus-preview').src = f.schemaProteus;
-        document.getElementById('schema-proteus-preview').style.display = 'block';
+        document.getElementById('schema-proteus-container').style.display = 'block';
         document.getElementById('schema-proteus-label').style.display = 'none';
         document.getElementById('schema-proteus-actions').style.display = 'flex';
     } else {
-        document.getElementById('schema-proteus-preview').style.display = 'none';
+        document.getElementById('schema-proteus-container').style.display = 'none';
         document.getElementById('schema-proteus-label').style.display = 'block';
         document.getElementById('schema-proteus-actions').style.display = 'none';
     }
@@ -1303,25 +1840,161 @@ function openComponentPicker() {
     const content = document.getElementById('component-picker-content');
     content.innerHTML = `
         <div style="margin-bottom:20px;">
+            <!-- Barre de recherche -->
+            <input type="text" id="component-picker-search" placeholder="🔍 Rechercher un composant..." 
+                   style="width:100%; padding:12px 15px; background:#0f172a; border:1px solid var(--accent); color:white; border-radius:10px; font-size:14px; margin-bottom:15px; box-sizing:border-box;"
+                   oninput="filterComponentPicker(this.value)">
+            
             <button class="btn" style="background:var(--success); width:100%;" onclick="validateComponentSelection()">✅ VALIDER LA SÉLECTION</button>
         </div>
-    ` + componentCategories.map(cat => `
-        <div style="margin-bottom:20px;">
-            <h4 style="color:var(--accent); margin-bottom:10px;">${cat.icon} ${cat.name}</h4>
-            ${cat.components.map(comp => `
-                <div class="folder-item component-selectable" data-cat-id="${cat.id}" data-comp-id="${comp.id}" onclick="toggleComponentSelection(this)" style="border-left:3px solid #475569; margin-bottom:8px; cursor:pointer;">
-                    <input type="checkbox" class="component-checkbox" style="width:20px; height:20px; margin-right:10px;">
-                    <div class="folder-thumb" style="width:40px; height:40px; font-size:20px;">${cat.icon}</div>
-                    <div style="flex:1">
-                        <b style="font-size:13px;">${comp.name}</b><br>
-                        <span style="font-size:10px; opacity:0.6;">${comp.voltage || comp.type || ''}</span>
+        
+        <!-- Section Catégories -->
+        <div id="picker-categories-section">
+            <h3 style="color:var(--accent); margin:0 0 15px 0; font-size:16px;">📂 Catégories</h3>
+            <div id="picker-categories-list">
+                ${componentCategories.map((cat, idx) => `
+                    <div class="picker-category-item" data-category-name="${cat.name.toLowerCase()}" data-category-desc="${cat.description.toLowerCase()}" style="margin-bottom:15px;">
+                        <!-- En-tête de catégorie cliquable -->
+                        <div class="folder-item" onclick="toggleCategoryPicker('${cat.id}')" style="border-left:5px solid var(--accent); cursor:pointer; margin-bottom:10px;">
+                            <div class="folder-thumb" style="font-size:28px;">${cat.icon}</div>
+                            <div style="flex:1">
+                                <b>${cat.name}</b><br>
+                                <span style="font-size:11px; opacity:0.6;">${cat.description}</span>
+                            </div>
+                            <span id="arrow-${cat.id}" style="font-size:20px; transition:transform 0.3s;">▼</span>
+                        </div>
+                        
+                        <!-- Composants de la catégorie (masqués par défaut) -->
+                        <div id="category-content-${cat.id}" style="display:none; padding-left:10px;">
+                            ${cat.components.map(comp => `
+                                <div class="folder-item component-selectable" data-cat-id="${cat.id}" data-comp-id="${comp.id}" data-comp-name="${comp.name.toLowerCase()}" data-comp-voltage="${(comp.voltage || comp.type || '').toLowerCase()}" onclick="toggleComponentSelection(this)" style="border-left:3px solid #475569; margin-bottom:8px; cursor:pointer;">
+                                    <input type="checkbox" class="component-checkbox" style="width:20px; height:20px; margin-right:10px;">
+                                    <div class="folder-thumb" style="width:40px; height:40px; font-size:20px;">${cat.icon}</div>
+                                    <div style="flex:1">
+                                        <b style="font-size:13px;">${comp.name}</b><br>
+                                        <span style="font-size:10px; opacity:0.6;">${comp.voltage || comp.type || ''}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
                     </div>
-                </div>
-            `).join('')}
+                `).join('')}
+            </div>
         </div>
-    `).join('');
+        
+        <!-- Section Composants (affichée lors de la recherche) -->
+        <div id="picker-components-section" style="display:none;">
+            <h3 style="color:var(--accent); margin:20px 0 15px 0; font-size:16px;">⚡ Composants</h3>
+            <div id="picker-components-results"></div>
+        </div>
+    `;
     
     openModal('modal-component-picker');
+}
+
+function toggleCategoryPicker(categoryId) {
+    const content = document.getElementById('category-content-' + categoryId);
+    const arrow = document.getElementById('arrow-' + categoryId);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        arrow.style.transform = 'rotate(180deg)';
+    } else {
+        content.style.display = 'none';
+        arrow.style.transform = 'rotate(0deg)';
+    }
+}
+
+function filterComponentPicker(searchTerm) {
+    const term = searchTerm.toLowerCase().trim();
+    const categoriesSection = document.getElementById('picker-categories-section');
+    const componentsSection = document.getElementById('picker-components-section');
+    const categoryItems = document.querySelectorAll('.picker-category-item');
+    const componentsResults = document.getElementById('picker-components-results');
+    
+    if (term === '') {
+        // Tout réinitialiser : afficher les catégories, masquer la section composants, fermer les accordéons
+        categoryItems.forEach(cat => {
+            cat.style.display = 'block';
+            // Fermer les catégories
+            const categoryName = cat.getAttribute('data-category-name');
+            const categoryId = componentCategories.find(c => c.name.toLowerCase() === categoryName)?.id;
+            if (categoryId) {
+                const content = document.getElementById('category-content-' + categoryId);
+                const arrow = document.getElementById('arrow-' + categoryId);
+                if (content) content.style.display = 'none';
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+            }
+        });
+        componentsSection.style.display = 'none';
+        return;
+    }
+    
+    // Filtrer les catégories (afficher/masquer mais NE PAS les ouvrir automatiquement)
+    categoryItems.forEach(cat => {
+        const categoryName = cat.getAttribute('data-category-name');
+        const categoryDesc = cat.getAttribute('data-category-desc');
+        const categoryId = componentCategories.find(c => c.name.toLowerCase() === categoryName)?.id;
+        
+        if (categoryName.includes(term) || categoryDesc.includes(term)) {
+            // La catégorie correspond : l'afficher MAIS la laisser fermée
+            cat.style.display = 'block';
+        } else {
+            // Vérifier si la catégorie contient des composants correspondants
+            if (categoryId) {
+                const content = document.getElementById('category-content-' + categoryId);
+                const items = content.querySelectorAll('.component-selectable');
+                let hasVisibleItems = false;
+                
+                items.forEach(item => {
+                    const compName = item.getAttribute('data-comp-name');
+                    const compVoltage = item.getAttribute('data-comp-voltage');
+                    
+                    if (compName.includes(term) || compVoltage.includes(term)) {
+                        hasVisibleItems = true;
+                    }
+                });
+                
+                // Afficher la catégorie si elle contient des composants correspondants, mais la laisser fermée
+                cat.style.display = hasVisibleItems ? 'block' : 'none';
+            } else {
+                cat.style.display = 'none';
+            }
+        }
+    });
+    
+    // Chercher dans tous les composants pour la section "Composants"
+    let matchingComponents = [];
+    componentCategories.forEach(cat => {
+        cat.components.forEach(comp => {
+            const compName = comp.name.toLowerCase();
+            const compVoltage = (comp.voltage || comp.type || '').toLowerCase();
+            
+            if (compName.includes(term) || compVoltage.includes(term)) {
+                matchingComponents.push({
+                    category: cat,
+                    component: comp
+                });
+            }
+        });
+    });
+    
+    // Afficher la section composants avec tous les composants trouvés
+    if (matchingComponents.length > 0) {
+        componentsSection.style.display = 'block';
+        componentsResults.innerHTML = matchingComponents.map(item => `
+            <div class="folder-item component-selectable" data-cat-id="${item.category.id}" data-comp-id="${item.component.id}" data-comp-name="${item.component.name.toLowerCase()}" data-comp-voltage="${(item.component.voltage || item.component.type || '').toLowerCase()}" onclick="toggleComponentSelection(this)" style="border-left:3px solid #475569; margin-bottom:8px; cursor:pointer;">
+                <input type="checkbox" class="component-checkbox" style="width:20px; height:20px; margin-right:10px;">
+                <div class="folder-thumb" style="width:40px; height:40px; font-size:20px;">${item.category.icon}</div>
+                <div style="flex:1">
+                    <b style="font-size:13px;">${item.component.name}</b><br>
+                    <span style="font-size:10px; opacity:0.6;">${item.category.name} • ${item.component.voltage || item.component.type || ''}</span>
+                </div>
+            </div>
+        `).join('');
+    } else {
+        componentsSection.style.display = 'none';
+    }
 }
 
 function toggleComponentSelection(element) {
@@ -1547,7 +2220,7 @@ function previewFile() {
         reader.onload = e => {
             db[currentIdx].img = e.target.result;
             document.getElementById('proj-img-preview').src = e.target.result;
-            document.getElementById('proj-img-preview').style.display = 'block';
+            document.getElementById('proj-img-container').style.display = 'block';
             document.getElementById('proj-img-label').style.display = 'none';
             document.getElementById('proj-img-actions').style.display = 'flex';
             saveProjectToFolder(db[currentIdx]);
@@ -1563,7 +2236,7 @@ function previewSchemaPrincipe() {
         reader.onload = e => {
             db[currentIdx].schemaPrincipe = e.target.result;
             document.getElementById('schema-principe-preview').src = e.target.result;
-            document.getElementById('schema-principe-preview').style.display = 'block';
+            document.getElementById('schema-principe-container').style.display = 'block';
             document.getElementById('schema-principe-label').style.display = 'none';
             document.getElementById('schema-principe-actions').style.display = 'flex';
             saveProjectToFolder(db[currentIdx]);
@@ -1579,7 +2252,7 @@ function previewSchemaProteus() {
         reader.onload = e => {
             db[currentIdx].schemaProteus = e.target.result;
             document.getElementById('schema-proteus-preview').src = e.target.result;
-            document.getElementById('schema-proteus-preview').style.display = 'block';
+            document.getElementById('schema-proteus-container').style.display = 'block';
             document.getElementById('schema-proteus-label').style.display = 'none';
             document.getElementById('schema-proteus-actions').style.display = 'flex';
             saveProjectToFolder(db[currentIdx]);
@@ -1594,19 +2267,19 @@ function deleteImage(type) {
         
         if (type === 'img') {
             db[currentIdx].img = '';
-            document.getElementById('proj-img-preview').style.display = 'none';
+            document.getElementById('proj-img-container').style.display = 'none';
             document.getElementById('proj-img-label').style.display = 'block';
             document.getElementById('proj-img-actions').style.display = 'none';
             document.getElementById('img-upload').value = '';
         } else if (type === 'schemaPrincipe') {
             db[currentIdx].schemaPrincipe = '';
-            document.getElementById('schema-principe-preview').style.display = 'none';
+            document.getElementById('schema-principe-container').style.display = 'none';
             document.getElementById('schema-principe-label').style.display = 'block';
             document.getElementById('schema-principe-actions').style.display = 'none';
             document.getElementById('schema-principe-upload').value = '';
         } else if (type === 'schemaProteus') {
             db[currentIdx].schemaProteus = '';
-            document.getElementById('schema-proteus-preview').style.display = 'none';
+            document.getElementById('schema-proteus-container').style.display = 'none';
             document.getElementById('schema-proteus-label').style.display = 'block';
             document.getElementById('schema-proteus-actions').style.display = 'none';
             document.getElementById('schema-proteus-upload').value = '';

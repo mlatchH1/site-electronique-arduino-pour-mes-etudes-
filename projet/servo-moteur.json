@@ -1,0 +1,48 @@
+{
+  "name": "servo moteur",
+  "status": "En cours",
+  "notes": "",
+  "code": "#include <Servo.h>\nconst int potar = 0;\nServo monServo;\n\nvoid setup(){\nmonServo.attach(2,750,2200);\n}\n\nvoid loop(){\nmonServo.write(0);\ndelay(5000);\nmonServo.write(170);\ndelay(5000);\n}",
+  "img": "",
+  "schemaPrincipe": "",
+  "schemaProteus": "",
+  "components": [
+    {
+      "id": "sg90",
+      "categoryId": "actuator",
+      "name": "Servo SG90",
+      "category": "Actionneurs",
+      "icon": "⚙️",
+      "quantity": 1,
+      "data": {
+        "id": "sg90",
+        "name": "Servo SG90",
+        "voltage": "4.8-6V",
+        "torque": "1.8 kg·cm à 4.8V",
+        "angle": "0-180°",
+        "symbole": "images/composants/Actionneurs/sg90/symbole/symbole.png",
+        "description": "Petit servomoteur très populaire, précis et abordable pour les projets Arduino.",
+        "usage": "Robotique, bras articulé, volet motorisé, direction RC. Signal PWM 50Hz (20ms), impulsions 1-2ms.",
+        "pinout": "Marron/Noir : GND\nRouge : VCC (5V externe recommandé)\nOrange/Jaune : Signal PWM",
+        "pinoutFolder": "images/composants/Actionneurs/sg90/brochage",
+        "footprint": "Corps: 22.5 × 12 × 29mm\nFixes: 32mm entre trous de montage",
+        "footprintFolder": "images/composants/Actionneurs/sg90/empreinte",
+        "formula": "Durée (ms) = 1 + (Angle / 180)\nFréquence : 50Hz (période 20ms)",
+        "calculator": {
+          "inputs": [
+            {
+              "id": "angle",
+              "label": "Angle (0-180°)",
+              "default": 90
+            }
+          ],
+          "calc": "1 + (angle / 180)",
+          "result": "Durée impulsion: {result} ms"
+        },
+        "code": "#include <Servo.h>\nServo servo;\nvoid setup() { servo.attach(9); }\nservo.write(90); // Position 90°"
+      }
+    }
+  ],
+  "createdAt": "2026-01-05T13:56:41.267Z",
+  "updatedAt": "2026-01-05T19:39:03.803Z"
+}

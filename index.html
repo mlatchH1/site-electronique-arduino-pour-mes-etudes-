@@ -82,7 +82,8 @@
         .modal-header { padding: 15px 20px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between; background: var(--card); }
         
         .code-editor { background: #000; color: #22c55e; font-family: 'Courier New', monospace; height: 250px; border: 1px solid var(--primary); padding: 12px; font-size: 12px; line-height: 1.4;}
-        .img-preview { width: 100%; max-height: 400px; border-radius: 15px; object-fit: contain; margin-bottom: 15px; background: #0f172a; border: 1px solid #334155;}
+        .img-preview { width: 100%; max-height: 400px; border-radius: 15px; object-fit: contain; background: #0f172a; display: block;}
+        .img-container { border: 1px solid #334155; border-radius: 15px; padding: 10px; background: #0f172a; margin: 10px 0 15px 0; }
 
         .formula-item {
             background: var(--card); padding: 18px; border-radius: 15px;
@@ -198,6 +199,14 @@
             <h2>Composants</h2>
             <div style="width:60px"></div>
         </div>
+        
+        <!-- Barre de recherche -->
+        <div style="padding:15px 20px 0 20px;">
+            <input type="text" id="component-search" placeholder="🔍 Rechercher un composant..." 
+                   style="width:100%; padding:12px 15px; background:#1e293b; border:1px solid #334155; color:white; border-radius:10px; font-size:14px; box-sizing:border-box;"
+                   oninput="filterComponentCategories(this.value)">
+        </div>
+        
         <div id="component-categories" style="margin-top:15px; padding-bottom: 100px;"></div>
     </div>
 
@@ -343,7 +352,9 @@ void executeCommand(String cmd) {
         </div>
         <div style="padding: 20px; overflow-y: auto; flex: 1;">
             <label style="color:var(--accent); font-size:11px; font-weight:bold;">PHOTO DU PROJET FINAL</label>
-            <img id="proj-img-preview" class="img-preview" style="display:none; margin-top:10px;">
+            <div id="proj-img-container" class="img-container" style="display:none;">
+                <img id="proj-img-preview" class="img-preview">
+            </div>
             <label for="img-upload" id="proj-img-label" style="background:#334155; color:white; padding:12px; border-radius:10px; display:block; text-align:center; cursor:pointer; margin-bottom:10px; margin-top:10px;">📸 Ajouter une photo</label>
             <input type="file" id="img-upload" accept="image/*" style="display:none" onchange="previewFile()">
             <div id="proj-img-actions" style="display:none; gap:10px; margin-bottom:20px;">
@@ -352,7 +363,9 @@ void executeCommand(String cmd) {
             </div>
             
             <label style="color:var(--accent); font-size:11px; font-weight:bold; margin-top:15px; display:block;">SCHÉMA DE PRINCIPE (TINKERCAD)</label>
-            <img id="schema-principe-preview" class="img-preview" style="display:none; margin-top:10px;">
+            <div id="schema-principe-container" class="img-container" style="display:none;">
+                <img id="schema-principe-preview" class="img-preview">
+            </div>
             <label for="schema-principe-upload" id="schema-principe-label" style="background:#334155; color:white; padding:12px; border-radius:10px; display:block; text-align:center; cursor:pointer; margin-bottom:10px; margin-top:10px;">🔌 Ajouter un schéma</label>
             <input type="file" id="schema-principe-upload" accept="image/*" style="display:none" onchange="previewSchemaPrincipe()">
             <div id="schema-principe-actions" style="display:none; gap:10px; margin-bottom:20px;">
@@ -361,7 +374,9 @@ void executeCommand(String cmd) {
             </div>
             
             <label style="color:var(--accent); font-size:11px; font-weight:bold; margin-top:15px; display:block;">SCHÉMA PROTEUS</label>
-            <img id="schema-proteus-preview" class="img-preview" style="display:none; margin-top:10px;">
+            <div id="schema-proteus-container" class="img-container" style="display:none;">
+                <img id="schema-proteus-preview" class="img-preview">
+            </div>
             <label for="schema-proteus-upload" id="schema-proteus-label" style="background:#334155; color:white; padding:12px; border-radius:10px; display:block; text-align:center; cursor:pointer; margin-bottom:10px; margin-top:10px;">⚡ Ajouter un schéma</label>
             <input type="file" id="schema-proteus-upload" accept="image/*" style="display:none" onchange="previewSchemaProteus()">
             <div id="schema-proteus-actions" style="display:none; gap:10px; margin-bottom:20px;">
@@ -439,6 +454,14 @@ Mode WiFi : commandes simples pour exécution distante (ex: led 13 on, delay 100
             <h3 id="component-list-title">Composants</h3>
             <div style="width:60px"></div>
         </div>
+        
+        <!-- Barre de recherche dans la liste -->
+        <div style="padding:15px 20px 0 20px;">
+            <input type="text" id="component-list-search" placeholder="🔍 Rechercher..." 
+                   style="width:100%; padding:12px 15px; background:#1e293b; border:1px solid #334155; color:white; border-radius:10px; font-size:14px; box-sizing:border-box;"
+                   oninput="filterComponentList(this.value)">
+        </div>
+        
         <div id="component-list-content" style="padding: 20px; overflow-y: auto; flex: 1;"></div>
     </div>
 
