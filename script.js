@@ -1340,16 +1340,24 @@ function filterComponentCategories(searchTerm) {
     // Afficher les composants trouvés
     if (matchingComponents.length > 0) {
         componentsSection.style.display = 'block';
-        componentsResults.innerHTML = matchingComponents.map(item => `
+        componentsResults.innerHTML = matchingComponents.map(item => {
+            const componentImagePath = item.component.imagePath || `images/composants/${item.category.id}/${item.component.id}/apercu/composant.png`;
+            return `
             <div class="folder-item" onclick="showComponentDetail('${item.category.id}', '${item.component.id}')" style="border-left: 5px solid var(--primary); margin:0 20px 10px 20px;">
-                <div class="folder-thumb" style="font-size:24px;">${item.category.icon}</div>
+                <div class="folder-thumb" style="width:50px; height:50px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                    <img src="${componentImagePath}" 
+                         alt="${item.component.name}" 
+                         style="max-width:100%; max-height:100%; object-fit:contain;"
+                         onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=font-size:24px;>${item.category.icon}</span>';">
+                </div>
                 <div style="flex:1">
                     <b>${item.component.name}</b><br>
                     <span style="font-size:11px; opacity:0.6;">${item.category.name} • ${item.component.voltage || item.component.type || ''}</span>
                 </div>
                 <span style="font-size:18px;">→</span>
             </div>
-        `).join('');
+        `;
+        }).join('');
     } else {
         componentsSection.style.display = 'none';
     }
@@ -1360,16 +1368,24 @@ function showComponentList(categoryId) {
     if (!category) return;
     
     document.getElementById('component-list-title').innerText = category.name;
-    document.getElementById('component-list-content').innerHTML = category.components.map(comp => `
+    document.getElementById('component-list-content').innerHTML = category.components.map(comp => {
+        const componentImagePath = comp.imagePath || `images/composants/${categoryId}/${comp.id}/apercu/composant.png`;
+        return `
         <div class="folder-item component-item" data-comp-name="${comp.name.toLowerCase()}" data-comp-voltage="${(comp.voltage || comp.type || '').toLowerCase()}" onclick="showComponentDetail('${categoryId}', '${comp.id}')" style="border-left: 5px solid var(--primary);">
-            <div class="folder-thumb" style="font-size:24px;">${category.icon}</div>
+            <div class="folder-thumb" style="width:50px; height:50px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                <img src="${componentImagePath}" 
+                     alt="${comp.name}" 
+                     style="max-width:100%; max-height:100%; object-fit:contain;"
+                     onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=font-size:24px;>${category.icon}</span>';">
+            </div>
             <div style="flex:1">
                 <b>${comp.name}</b><br>
                 <span style="font-size:11px; opacity:0.6;">${comp.voltage || comp.type || ''}</span>
             </div>
             <span style="font-size:18px;">→</span>
         </div>
-    `).join('');
+    `;
+    }).join('');
     
     // Réinitialiser le champ de recherche
     const searchInput = document.getElementById('component-list-search');
@@ -1403,8 +1419,17 @@ function showComponentDetail(categoryId, componentId) {
     closeModal('modal-component-list');
     
     document.getElementById('component-detail-title').innerText = component.name;
+    
+    // Image du composant
+    const componentImagePath = component.imagePath || `images/composants/${categoryId}/${componentId}/apercu/composant.png`;
+    
     let detailHTML = `
-        <div style="text-align:center; font-size:48px; margin:20px 0;">${category.icon}</div>
+        <div style="text-align:center; margin:20px 0;">
+            <img src="${componentImagePath}" 
+                 alt="${component.name}" 
+                 style="max-width:300px; max-height:250px; object-fit:contain;"
+                 onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=font-size:48px;>${category.icon}</div>';">
+        </div>
         
         <div class="card">
             <h3 style="color:var(--accent); margin-top:0;">📋 Description</h3>
