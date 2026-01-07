@@ -296,6 +296,7 @@ const arduinoBoards = [
 const componentCategories = [
     {
         id: 'led',
+        folderName: 'led',
         name: 'LED',
         icon: '💡',
         description: 'Diodes électroluminescentes',
@@ -437,6 +438,7 @@ const componentCategories = [
     },
     {
         id: 'input',
+        folderName: 'Entrees',
         name: 'Entrées',
         icon: '🎛️',
         description: 'Boutons, potentiomètres et commandes',
@@ -481,6 +483,7 @@ const componentCategories = [
     },
     {
         id: 'audio',
+        folderName: 'Audio',
         name: 'Audio',
         icon: '🔊',
         description: 'Buzzers et haut-parleurs',
@@ -518,6 +521,7 @@ const componentCategories = [
     },
     {
         id: 'resistor',
+        folderName: 'Resistances',
         name: 'Résistances',
         icon: '⚡',
         description: 'Composants passifs limitant le courant',
@@ -525,6 +529,7 @@ const componentCategories = [
     },
     {
         id: 'capacitor',
+        folderName: 'Condensateurs',
         name: 'Condensateurs',
         icon: '🔋',
         description: 'Stockage d\'énergie électrique',
@@ -571,6 +576,7 @@ const componentCategories = [
     },
     {
         id: 'sensor',
+        folderName: 'Capteurs',
         name: 'Capteurs',
         icon: '📡',
         description: 'Mesure de grandeurs physiques',
@@ -636,6 +642,7 @@ const componentCategories = [
     },
     {
         id: 'actuator',
+        folderName: 'Actionneurs',
         name: 'Actionneurs',
         icon: '⚙️',
         description: 'Moteurs, servos, relais',
@@ -686,6 +693,7 @@ const componentCategories = [
     },
     {
         id: 'ic',
+        folderName: 'Circuits-Integres',
         name: 'Circuits Intégrés',
         icon: '🔲',
         description: 'Puces et modules',
@@ -1341,7 +1349,7 @@ function filterComponentCategories(searchTerm) {
     if (matchingComponents.length > 0) {
         componentsSection.style.display = 'block';
         componentsResults.innerHTML = matchingComponents.map(item => {
-            const componentImagePath = item.component.imagePath || `images/composants/${item.category.id}/${item.component.id}/apercu/composant.png`;
+            const componentImagePath = item.component.imagePath || `images/composants/${item.category.folderName || item.category.id}/${item.component.id}/apercu/composant.png`;
             return `
             <div class="folder-item" onclick="showComponentDetail('${item.category.id}', '${item.component.id}')" style="border-left: 5px solid var(--primary); margin:0 20px 10px 20px;">
                 <div class="folder-thumb" style="width:50px; height:50px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
@@ -1369,7 +1377,7 @@ function showComponentList(categoryId) {
     
     document.getElementById('component-list-title').innerText = category.name;
     document.getElementById('component-list-content').innerHTML = category.components.map(comp => {
-        const componentImagePath = comp.imagePath || `images/composants/${categoryId}/${comp.id}/apercu/composant.png`;
+        const componentImagePath = comp.imagePath || `images/composants/${category.folderName || categoryId}/${comp.id}/apercu/composant.png`;
         return `
         <div class="folder-item component-item" data-comp-name="${comp.name.toLowerCase()}" data-comp-voltage="${(comp.voltage || comp.type || '').toLowerCase()}" onclick="showComponentDetail('${categoryId}', '${comp.id}')" style="border-left: 5px solid var(--primary);">
             <div class="folder-thumb" style="width:50px; height:50px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
@@ -1421,7 +1429,7 @@ function showComponentDetail(categoryId, componentId) {
     document.getElementById('component-detail-title').innerText = component.name;
     
     // Image du composant
-    const componentImagePath = component.imagePath || `images/composants/${categoryId}/${componentId}/apercu/composant.png`;
+    const componentImagePath = component.imagePath || `images/composants/${category.folderName || categoryId}/${componentId}/apercu/composant.png`;
     
     let detailHTML = `
         <div style="text-align:center; margin:20px 0;">
@@ -1849,16 +1857,29 @@ function renderProjectComponents() {
         return;
     }
     
-    container.innerHTML = f.components.map((comp, idx) => `
+    container.innerHTML = f.components.map((comp, idx) => {
+        // Construire le chemin de l'image du composant
+        const category = componentCategories.find(c => c.id === comp.categoryId);
+        const compId = comp.componentId || comp.id; // Fallback pour anciens projets
+        const componentImagePath = comp.imagePath || (category && compId ? 
+            `images/composants/${category.folderName || comp.categoryId}/${compId}/apercu/composant.png` : null);
+        
+        return `
         <div class="folder-item" style="margin-bottom:8px; padding:10px; border-left:3px solid var(--accent);" onclick="viewProjectComponent(${idx})">
-            <div class="folder-thumb" style="width:40px; height:40px; font-size:20px;">${comp.icon}</div>
+            <div class="folder-thumb" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                ${componentImagePath ? 
+                    `<img src="${componentImagePath}" alt="${comp.name}" style="max-width:100%; max-height:100%; object-fit:contain;" onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=font-size:20px;>${comp.icon}</span>';">` :
+                    `<span style="font-size:20px;">${comp.icon}</span>`
+                }
+            </div>
             <div style="flex:1">
                 <b style="font-size:13px;">${comp.quantity || 1}x ${comp.name}</b><br>
                 <span style="font-size:10px; opacity:0.6;">${comp.category}</span>
             </div>
             <button onclick="removeProjectComponent(${idx}); event.stopPropagation();" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:5px; font-size:11px;">✕</button>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 function openComponentPicker() {
@@ -1891,16 +1912,24 @@ function openComponentPicker() {
                         
                         <!-- Composants de la catégorie (masqués par défaut) -->
                         <div id="category-content-${cat.id}" style="display:none; padding-left:10px;">
-                            ${cat.components.map(comp => `
+                            ${cat.components.map(comp => {
+                                const componentImagePath = comp.imagePath || `images/composants/${cat.folderName || cat.id}/${comp.id}/apercu/composant.png`;
+                                return `
                                 <div class="folder-item component-selectable" data-cat-id="${cat.id}" data-comp-id="${comp.id}" data-comp-name="${comp.name.toLowerCase()}" data-comp-voltage="${(comp.voltage || comp.type || '').toLowerCase()}" onclick="toggleComponentSelection(this)" style="border-left:3px solid #475569; margin-bottom:8px; cursor:pointer;">
                                     <input type="checkbox" class="component-checkbox" style="width:20px; height:20px; margin-right:10px;">
-                                    <div class="folder-thumb" style="width:40px; height:40px; font-size:20px;">${cat.icon}</div>
+                                    <div class="folder-thumb" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                                        <img src="${componentImagePath}" 
+                                             alt="${comp.name}" 
+                                             style="max-width:100%; max-height:100%; object-fit:contain;"
+                                             onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=font-size:20px;>${cat.icon}</span>';">
+                                    </div>
                                     <div style="flex:1">
                                         <b style="font-size:13px;">${comp.name}</b><br>
                                         <span style="font-size:10px; opacity:0.6;">${comp.voltage || comp.type || ''}</span>
                                     </div>
                                 </div>
-                            `).join('')}
+                            `;
+                            }).join('')}
                         </div>
                     </div>
                 `).join('')}
@@ -2007,16 +2036,24 @@ function filterComponentPicker(searchTerm) {
     // Afficher la section composants avec tous les composants trouvés
     if (matchingComponents.length > 0) {
         componentsSection.style.display = 'block';
-        componentsResults.innerHTML = matchingComponents.map(item => `
+        componentsResults.innerHTML = matchingComponents.map(item => {
+            const componentImagePath = item.component.imagePath || `images/composants/${item.category.folderName || item.category.id}/${item.component.id}/apercu/composant.png`;
+            return `
             <div class="folder-item component-selectable" data-cat-id="${item.category.id}" data-comp-id="${item.component.id}" data-comp-name="${item.component.name.toLowerCase()}" data-comp-voltage="${(item.component.voltage || item.component.type || '').toLowerCase()}" onclick="toggleComponentSelection(this)" style="border-left:3px solid #475569; margin-bottom:8px; cursor:pointer;">
                 <input type="checkbox" class="component-checkbox" style="width:20px; height:20px; margin-right:10px;">
-                <div class="folder-thumb" style="width:40px; height:40px; font-size:20px;">${item.category.icon}</div>
+                <div class="folder-thumb" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                    <img src="${componentImagePath}" 
+                         alt="${item.component.name}" 
+                         style="max-width:100%; max-height:100%; object-fit:contain;"
+                         onerror="this.style.display='none'; this.parentElement.innerHTML='<span style=font-size:20px;>${item.category.icon}</span>';">
+                </div>
                 <div style="flex:1">
                     <b style="font-size:13px;">${item.component.name}</b><br>
                     <span style="font-size:10px; opacity:0.6;">${item.category.name} • ${item.component.voltage || item.component.type || ''}</span>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
     } else {
         componentsSection.style.display = 'none';
     }
@@ -2092,6 +2129,7 @@ function addMultipleComponents() {
         } else {
             f.components.push({
                 id: compId,
+                componentId: compId,
                 categoryId: catId,
                 name: component.name,
                 category: category.name,
@@ -2141,6 +2179,7 @@ function addComponentToProject(catId, compId) {
         
         f.components.push({
             id: compId,
+            componentId: compId,  // Pour la construction du chemin d'image
             categoryId: catId,
             name: component.name,
             category: category.name,

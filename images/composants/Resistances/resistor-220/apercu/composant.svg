@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150" width="300" height="150">
+  <!-- Résistance 220Ω avec code couleur: Rouge-Rouge-Marron-Or -->
+  <defs>
+    <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#e8d4b0;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#d4b896;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#c0a080;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Pattes -->
+  <line x1="10" y1="75" x2="70" y2="75" stroke="#c0c0c0" stroke-width="4" stroke-linecap="round"/>
+  <line x1="230" y1="75" x2="290" y2="75" stroke="#c0c0c0" stroke-width="4" stroke-linecap="round"/>
+  
+  <!-- Corps de la résistance -->
+  <rect x="70" y="55" width="160" height="40" fill="url(#bodyGradient)" stroke="#a08060" stroke-width="2" rx="3"/>
+  
+  <!-- Bandes de couleur -->
+  <!-- Bande 1: Rouge -->
+  <rect x="90" y="52" width="16" height="46" fill="#e74c3c" stroke="#c0392b" stroke-width="1"/>
+  
+  <!-- Bande 2: Rouge -->
+  <rect x="120" y="52" width="16" height="46" fill="#e74c3c" stroke="#c0392b" stroke-width="1"/>
+  
+  <!-- Bande 3: Marron (multiplicateur) -->
+  <rect x="150" y="52" width="16" height="46" fill="#8B4513" stroke="#654321" stroke-width="1"/>
+  
+  <!-- Bande 4: Or (tolérance ±5%) -->
+  <rect x="205" y="52" width="12" height="46" fill="#FFD700" stroke="#DAA520" stroke-width="1">
+    <animate attributeName="opacity" values="1;0.8;1" dur="2s" repeatCount="indefinite"/>
+  </rect>
+  
+  <!-- Texte -->
+  <text x="150" y="30" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="#333" text-anchor="middle">220Ω</text>
+  <text x="150" y="130" font-family="Arial, sans-serif" font-size="12" fill="#666" text-anchor="middle">Rouge-Rouge-Marron-Or</text>
+  <text x="150" y="145" font-family="Arial, sans-serif" font-size="10" fill="#999" text-anchor="middle">±5% • 0.25W</text>
+</svg>
