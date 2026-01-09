@@ -10,10 +10,18 @@
             --success: #22c55e; --danger: #ef4444; --text: #f8fafc;
             --accent: #38bdf8;
         }
+        
+        /* Thème clair */
+        :root[data-theme="light"] {
+            --bg: #f1f5f9; --card: #ffffff; --primary: #6366f1;
+            --success: #22c55e; --danger: #ef4444; --text: #0f172a;
+            --accent: #0ea5e9;
+        }
 
         body { 
             font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); 
             margin: 0; padding-bottom: 80px; overflow-x: hidden;
+            transition: background 0.3s, color 0.3s;
         }
 
         /* Barre supérieure */
@@ -98,6 +106,99 @@
         .calc-result {
             font-size: 24px; font-weight: bold; text-align: center; color: var(--text); margin-bottom: 15px;
         }
+        
+        /* Barre de recherche */
+        .search-box {
+            position: sticky; top: 60px; z-index: 400; padding: 15px 20px;
+            background: var(--card); border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .search-input {
+            width: 100%; padding: 12px 40px 12px 15px; background: var(--bg);
+            border: 2px solid var(--accent); border-radius: 25px; color: var(--text);
+            font-size: 14px; box-sizing: border-box; transition: all 0.2s;
+        }
+        
+        .search-input:focus {
+            outline: none; border-color: var(--primary); box-shadow: 0 0 15px rgba(99,102,241,0.3);
+        }
+        
+        .theme-toggle {
+            background: none; border: 2px solid var(--accent); border-radius: 50%;
+            width: 40px; height: 40px; font-size: 20px; cursor: pointer;
+            transition: all 0.3s; display: flex; align-items: center; justify-content: center;
+        }
+        
+        .theme-toggle:hover { transform: rotate(20deg); border-color: var(--primary); }
+        
+        .history-badge {
+            position: absolute; top: -5px; right: -5px; background: var(--danger);
+            color: white; border-radius: 50%; width: 18px; height: 18px;
+            font-size: 10px; font-weight: bold; display: flex;
+            align-items: center; justify-content: center;
+        }
+        
+        /* Notifications Toast */
+        .toast-container {
+            position: fixed; top: 70px; right: 20px; z-index: 3000;
+            display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+        }
+        
+        .toast {
+            background: var(--card); border-radius: 12px; padding: 15px 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3); min-width: 280px; max-width: 400px;
+            border-left: 4px solid var(--primary); display: flex; align-items: center;
+            gap: 12px; animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s;
+            pointer-events: all;
+        }
+        
+        .toast.success { border-left-color: var(--success); }
+        .toast.error { border-left-color: var(--danger); }
+        .toast.info { border-left-color: var(--accent); }
+        
+        @keyframes slideInRight {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateX(400px); }
+        }
+        
+        .toast-icon { font-size: 24px; flex-shrink: 0; }
+        .toast-content { flex: 1; }
+        .toast-title { font-weight: bold; margin-bottom: 4px; }
+        .toast-message { font-size: 13px; color: #94a3b8; line-height: 1.4; }
+        
+        /* Mode plein écran */
+        .fullscreen-mode {
+            position: fixed; inset: 0; z-index: 2500; background: var(--bg);
+            display: flex; flex-direction: column;
+        }
+        
+        .fullscreen-header {
+            background: var(--card); padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.1);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        
+        .fullscreen-content {
+            flex: 1; overflow-y: auto; padding: 20px;
+        }
+        
+        /* Boutons action rapide */
+        .action-buttons {
+            display: flex; gap: 10px; flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            padding: 10px 16px; border-radius: 10px; border: none;
+            color: white; font-size: 13px; font-weight: bold;
+            cursor: pointer; transition: all 0.2s; display: flex;
+            align-items: center; gap: 8px;
+        }
+        
+        .action-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .action-btn:active { transform: translateY(0); }
 
         .calc-container label {
             font-size: 11px; font-weight: bold; display: block; margin-top: 10px; color: var(--accent);
@@ -117,8 +218,21 @@
 </head>
 <body>
 
+    <!-- Conteneur pour notifications toast -->
+    <div id="toast-container" class="toast-container"></div>
+
     <div id="view-home" class="view active-view">
-        <div class="app-bar"><h2>ESP32 <span style="color:var(--primary)">Lab</span></h2><button onclick="openModal('modal-settings-menu')" style="background:none; border:none; font-size:24px;">📶</button></div>
+        <div class="app-bar">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <h2>ESP32 <span style="color:var(--primary)">Lab</span></h2>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button class="theme-toggle" onclick="toggleTheme()" title="Changer de thème">
+                    <span id="theme-icon">🌙</span>
+                </button>
+                <button onclick="openModal('modal-settings-menu')" style="background:none; border:none; font-size:24px;">📶</button>
+            </div>
+        </div>
         <!-- Panneau de contrôle désactivé temporairement -->
         <!-- <div class="card" style="margin-top:20px;">
             <h3>🕹️ Contrôle Direct</h3>
@@ -155,7 +269,40 @@
             <h2>Projets</h2>
             <div style="display:flex; gap:10px; align-items:center;">
                 <span id="project-count" style="font-size:12px; color:var(--accent); font-weight:bold;">0</span>
+                <button onclick="exportAllProjects()" style="background:#8b5cf6; color:white; border:none; padding:10px 16px; border-radius:10px;" title="Exporter tous les projets">💾</button>
+                <button onclick="importProjects()" style="background:#06b6d4; color:white; border:none; padding:10px 16px; border-radius:10px;" title="Importer des projets">📂</button>
+                <button onclick="showStatistics()" style="background:var(--accent); color:white; border:none; padding:10px 16px; border-radius:10px;">📊</button>
                 <button onclick="newFolder()" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:bold;">+ NOUVEAU</button>
+            </div>
+        </div>
+        
+        <!-- Filtres -->
+        <div style="padding:15px 20px; background:#1e293b; border-bottom:1px solid #334155;">
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <!-- Filtre Catégorie -->
+                <select onchange="filterProjects('category', this.value)" style="flex:1; min-width:150px; padding:8px; background:#0f172a; border:1px solid var(--accent); color:white; border-radius:8px; font-size:12px;">
+                    <option value="all">📂 Toutes catégories</option>
+                    <option value="input">🎛️ Entrées</option>
+                    <option value="output">💡 Sorties</option>
+                    <option value="sensor">🌡️ Capteurs</option>
+                    <option value="actuator">⚙️ Actionneurs</option>
+                    <option value="communication">📡 Communication</option>
+                    <option value="display">📺 Affichage</option>
+                    <option value="other">📂 Autre</option>
+                </select>
+                
+                <!-- Filtre Difficulté -->
+                <select onchange="filterProjects('difficulty', this.value)" style="flex:1; min-width:150px; padding:8px; background:#0f172a; border:1px solid var(--accent); color:white; border-radius:8px; font-size:12px;">
+                    <option value="all">🎯 Tous niveaux</option>
+                    <option value="beginner">🟢 Débutant</option>
+                    <option value="intermediate">🟡 Intermédiaire</option>
+                    <option value="advanced">🔴 Avancé</option>
+                </select>
+                
+                <!-- Filtre Favoris -->
+                <button onclick="filterProjects('favorites', !currentFilter.favorites); this.style.background = currentFilter.favorites ? 'var(--accent)' : '#0f172a';" style="padding:8px 15px; background:#0f172a; border:1px solid var(--accent); color:white; border-radius:8px; font-size:12px; cursor:pointer; transition:background 0.2s;">
+                    ⭐ Favoris
+                </button>
             </div>
         </div>
         
@@ -178,7 +325,13 @@
     </div>
 
     <div id="view-tools" class="view">
-        <div class="app-bar"><h2>Engineering</h2></div>
+        <div class="app-bar">
+            <h2>Engineering</h2>
+            <button onclick="showCalculationHistory()" style="background:var(--accent); color:white; border:none; padding:10px 16px; border-radius:10px; position:relative;">
+                📊
+                <span id="history-count" class="history-badge" style="display:none;">0</span>
+            </button>
+        </div>
         <div id="formula-list" style="margin-top:15px; padding-bottom: 100px;"></div>
     </div>
 
@@ -197,17 +350,20 @@
         <div class="app-bar">
             <button onclick="switchView('view-home')" style="background:none; border:none; color:var(--primary); font-weight:bold;">← Retour</button>
             <h2>Composants</h2>
-            <div style="width:60px"></div>
+            <button onclick="showFavoriteComponents()" style="background:var(--accent); color:white; border:none; padding:10px 16px; border-radius:10px; position:relative;" title="Mes favoris">
+                ⭐
+                <span id="favorites-count" style="position:absolute; top:-5px; right:-5px; background:var(--danger); color:white; border-radius:50%; width:18px; height:18px; font-size:10px; display:none; align-items:center; justify-content:center;">0</span>
+            </button>
         </div>
         
         <!-- Barre de recherche -->
-        <div style="padding:15px 20px 0 20px;">
-            <input type="text" id="component-search" placeholder="🔍 Rechercher un composant..." 
-                   style="width:100%; padding:12px 15px; background:#1e293b; border:1px solid #334155; color:white; border-radius:10px; font-size:14px; box-sizing:border-box;"
-                   oninput="filterComponentCategories(this.value)">
+        <div class="search-box">
+            <input type="text" id="component-search" class="search-input" 
+                   placeholder="🔍 Rechercher un composant..." 
+                   oninput="searchComponents(this.value)">
         </div>
         
-        <div id="component-categories" style="margin-top:15px; padding-bottom: 100px;"></div>
+        <div id="component-category-list" style="margin-top:15px; padding:0 20px 100px 20px;"></div>
     </div>
 
     <!-- Menu Principal des Paramètres -->
@@ -217,6 +373,16 @@
             <div class="menu-option" onclick="requestProjectFolderAccess();">
                 <span style="font-size:24px;">📁</span>
                 <div><b>Sync dossier projet/</b><br><small style="color:#94a3b8;">Optionnel - Chrome/Edge uniquement</small></div>
+            </div>
+            
+            <div class="menu-option" onclick="exportAllProjects();">
+                <span style="font-size:24px;">💾</span>
+                <div><b>Exporter tous les projets</b><br><small style="color:#94a3b8;">Télécharger un fichier de sauvegarde</small></div>
+            </div>
+            
+            <div class="menu-option" onclick="importProjects();">
+                <span style="font-size:24px;">📥</span>
+                <div><b>Importer des projets</b><br><small style="color:#94a3b8;">Restaurer depuis un fichier JSON</small></div>
             </div>
             
             <div class="menu-option" onclick="closeModal('modal-settings-menu'); openModal('modal-wifi');">
@@ -229,7 +395,7 @@
                 <div><b>Aide</b><br><small style="color:#94a3b8;">Tutoriels et documentation</small></div>
             </div>
             
-            <div class="menu-option" onclick="alert('⚙️ Paramètres avancés\n\nCette section sera disponible prochainement !');">
+            <div class="menu-option" onclick="customAlert('⚙️ Paramètres avancés\n\nCette section sera disponible prochainement !', 'Bientôt disponible');">
                 <span style="font-size:24px;">⚙️</span>
                 <div><b>Paramètres avancés</b><br><small style="color:#94a3b8;">Personnalisation</small></div>
             </div>
@@ -382,6 +548,39 @@ void executeCommand(String cmd) {
             <div id="schema-proteus-actions" style="display:none; gap:10px; margin-bottom:20px;">
                 <button onclick="document.getElementById('schema-proteus-upload').click()" style="flex:1; background:var(--accent); color:white; border:none; padding:8px; border-radius:8px;">✏️ Modifier</button>
                 <button onclick="deleteImage('schemaProteus')" style="flex:1; background:var(--danger); color:white; border:none; padding:8px; border-radius:8px;">🗑️ Supprimer</button>
+            </div>
+            
+            <label style="color:var(--accent); font-size:11px; font-weight:bold; margin-top:15px; display:block;">CATÉGORIE</label>
+            <select id="edit-category" style="width:100%; padding:10px; background:#0f172a; border:1px solid var(--accent); color:white; border-radius:8px; margin-bottom:15px;">
+                <option value="input">🎛️ Entrées</option>
+                <option value="output">💡 Sorties</option>
+                <option value="sensor">🌡️ Capteurs</option>
+                <option value="actuator">⚙️ Actionneurs</option>
+                <option value="communication">📡 Communication</option>
+                <option value="display">📺 Affichage</option>
+                <option value="other">📂 Autre</option>
+            </select>
+            
+            <label style="color:var(--accent); font-size:11px; font-weight:bold;">NIVEAU DE DIFFICULTÉ</label>
+            <select id="edit-difficulty" style="width:100%; padding:10px; background:#0f172a; border:1px solid var(--accent); color:white; border-radius:8px; margin-bottom:15px;">
+                <option value="beginner">🟢 Débutant</option>
+                <option value="intermediate">🟡 Intermédiaire</option>
+                <option value="advanced">🔴 Avancé</option>
+            </select>
+            
+            <label style="color:var(--accent); font-size:11px; font-weight:bold;">TAGS (séparés par des virgules)</label>
+            <input type="text" id="edit-tags" placeholder="ex: led, bluetooth, capteur" style="width:100%; padding:10px; background:#0f172a; border:1px solid var(--accent); color:white; border-radius:8px; margin-bottom:15px;">
+            
+            <!-- Statistiques du projet -->
+            <div id="project-stats" style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+                <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding:15px; border-radius:10px; border:2px solid #3b82f6;">
+                    <div style="font-size:11px; color:#94a3b8; font-weight:bold;">📦 COMPOSANTS</div>
+                    <div id="stat-component-count" style="font-size:24px; font-weight:bold; color:#3b82f6;">0</div>
+                </div>
+                <div style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding:15px; border-radius:10px; border:2px solid #f59e0b;">
+                    <div style="font-size:11px; color:#94a3b8; font-weight:bold;">💰 COÛT TOTAL</div>
+                    <div id="stat-total-cost" style="font-size:24px; font-weight:bold; color:#fbbf24;">0.00 €</div>
+                </div>
             </div>
             
             <label style="color:var(--accent); font-size:11px; font-weight:bold;">COMPOSANTS UTILISÉS</label>

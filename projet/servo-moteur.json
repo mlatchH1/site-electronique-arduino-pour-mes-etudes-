@@ -44,5 +44,10 @@
     }
   ],
   "createdAt": "2026-01-05T13:56:41.267Z",
-  "updatedAt": "2026-01-06T11:23:41.219Z"
+  "updatedAt": "2026-01-08T21:51:05.198Z",
+  "category": "actuator",
+  "difficulty": "beginner",
+  "tags": [
+    "servo"
+  ]
 }

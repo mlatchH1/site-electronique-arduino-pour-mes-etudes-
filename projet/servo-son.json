@@ -1,0 +1,189 @@
+{
+  "name": "servo son",
+  "status": "En cours",
+  "notes": "",
+  "code": "#include <Servo.h>\n\nconst int potar = 0;\nServo monServo;\n\nint tring = 3;\nint echo = 2;\nlong echo_read;\nlong cm;\n\nvoid setup() {\n  pinMode(tring, OUTPUT);\n  pinMode(echo, INPUT);\n\n  Serial.begin(9600);\n  monServo.attach(9, 750, 2200);\n  \n  Serial.println(\"Commandes : 'h' pour capteur, 's' pour servo, 'x' pour stopper\");\n}\n\nvoid loop() {\n  if (Serial.available() > 0) {\n    char touche = Serial.read();\n\n    if (touche == 'h') {\n      capteur();\n    }\n\n    if (touche == 's') {\n      Serial.println(\"Mode SERVO active. Tapez 'x' pour l'arreter.\");\n      \n      // La boucle continue tant qu'on ne reçoit pas 'x'\n      bool continuer = true;\n      while (continuer) {\n        servo(); // On exécute la fonction servo\n\n        // On vérifie à CHAQUE passage si une touche est pressée\n        if (Serial.available() > 0) {\n          char reset = Serial.read();\n          if (reset == 'x') { // On utilise 'x' pour stopper (plus simple qu'un mot complet)\n            Serial.println(\"Arret : Retour au menu principal\");\n            continuer = false; \n          }\n        }\n      }\n    }\n  }\n}\n\nvoid capteur() {\n  digitalWrite(tring, LOW);\n  delayMicroseconds(2);\n  digitalWrite(tring, HIGH);\n  delayMicroseconds(10);\n  digitalWrite(tring, LOW);\n\n  echo_read = pulseIn(echo, HIGH);\n  cm = echo_read / 58;\n\n  Serial.print(\"Distance en cm : \");\n  Serial.println(cm);\n}\n\nvoid servo() {\n  int val = analogRead(potar);\n  int angle = map(val, 0, 1023, 0, 180);\n  monServo.write(angle);\n  Serial.print(\"Angle Servo : \");\n  Serial.println(angle);\n  delay(100); // Petit délai pour la stabilité\n}",
+  "img": "",
+  "schemaPrincipe": "",
+  "schemaProteus": "",
+  "components": [
+    {
+      "id": "hcsr04",
+      "componentId": "hcsr04",
+      "categoryId": "sensor",
+      "name": "HC-SR04 Ultrason",
+      "category": "Capteurs",
+      "icon": "📡",
+      "quantity": 1,
+      "data": {
+        "id": "hcsr04",
+        "name": "HC-SR04 Ultrason",
+        "voltage": "5V",
+        "range": "2-400 cm",
+        "accuracy": "±3mm",
+        "symbole": "images/composants/Capteurs/hcsr04/symbole/symbole.png",
+        "description": "Capteur de distance à ultrasons très précis et abordable.",
+        "usage": "Mesure de distance, détection d'obstacles, robot autonome, stationnement.",
+        "pinout": "VCC : 5V\nTrig : broche numérique (envoi impulsion)\nEcho : broche numérique (réception)\nGND : masse",
+        "pinoutFolder": "images/composants/Capteurs/hcsr04/brochage",
+        "footprint": "Module: 45 × 20 × 15mm\nCapteurs espacés de 26mm",
+        "footprintFolder": "images/composants/Capteurs/hcsr04/empreinte",
+        "formula": "Distance (cm) = (Durée × Vitesse_son) / 2\nVitesse du son = 340 m/s = 0.034 cm/μs\nDiviser par 2 car aller-retour",
+        "calculator": {
+          "inputs": [
+            {
+              "id": "duree",
+              "label": "Durée (μs)",
+              "default": 1000
+            }
+          ],
+          "calc": "duree * 0.034 / 2",
+          "result": "Distance: {result} cm"
+        },
+        "code": "digitalWrite(trig, HIGH);\ndelayMicroseconds(10);\ndigitalWrite(trig, LOW);\nlong duration = pulseIn(echo, HIGH);\nint distance = duration * 0.034 / 2;"
+      }
+    },
+    {
+      "id": "sg90",
+      "componentId": "sg90",
+      "categoryId": "actuator",
+      "name": "Servo SG90",
+      "category": "Actionneurs",
+      "icon": "⚙️",
+      "quantity": 1,
+      "data": {
+        "id": "sg90",
+        "name": "Servo SG90",
+        "voltage": "4.8-6V",
+        "torque": "1.8 kg·cm à 4.8V",
+        "angle": "0-180°",
+        "symbole": "images/composants/Actionneurs/sg90/symbole/symbole.png",
+        "description": "Petit servomoteur très populaire, précis et abordable pour les projets Arduino.",
+        "usage": "Robotique, bras articulé, volet motorisé, direction RC. Signal PWM 50Hz (20ms), impulsions 1-2ms.",
+        "pinout": "Marron/Noir : GND\nRouge : VCC (5V externe recommandé)\nOrange/Jaune : Signal PWM",
+        "pinoutFolder": "images/composants/Actionneurs/sg90/brochage",
+        "footprint": "Corps: 22.5 × 12 × 29mm\nFixes: 32mm entre trous de montage",
+        "footprintFolder": "images/composants/Actionneurs/sg90/empreinte",
+        "formula": "Durée (ms) = 1 + (Angle / 180)\nFréquence : 50Hz (période 20ms)",
+        "calculator": {
+          "inputs": [
+            {
+              "id": "angle",
+              "label": "Angle (0-180°)",
+              "default": 90
+            }
+          ],
+          "calc": "1 + (angle / 180)",
+          "result": "Durée impulsion: {result} ms"
+        },
+        "code": "#include <Servo.h>\nServo servo;\nvoid setup() { servo.attach(9); }\nservo.write(90); // Position 90°"
+      }
+    },
+    {
+      "id": "potentiometer",
+      "componentId": "potentiometer",
+      "categoryId": "interfaces",
+      "name": "Potentiomètre 10kΩ",
+      "category": "Interfaces Utilisateur",
+      "icon": "🎛️",
+      "quantity": 1,
+      "data": {
+        "id": "potentiometer",
+        "name": "Potentiomètre 10kΩ",
+        "voltage": "5V",
+        "resistance": "10kΩ",
+        "symbole": "images/composants/Entrees/potentiometer/symbole/symbole.png",
+        "description": "Résistance variable à 3 broches pour contrôle analogique précis.",
+        "usage": "Réglage de volume, luminosité, vitesse moteur, seuils. Entrée analogique 0-1023.",
+        "pinout": "VCC : alimentation (+5V)\nGND : masse (0V)\nOUT : curseur variable (broche centrale)",
+        "pinoutFolder": "images/composants/Entrees/potentiometer/brochage",
+        "footprint": "Type linéaire : 9mm de diamètre\nEspacement des pattes: 5mm",
+        "footprintFolder": "images/composants/Entrees/potentiometer/empreinte",
+        "formula": "Vout = (Position / 1023) × Vcc",
+        "calculator": {
+          "variables": [
+            {
+              "id": "vout",
+              "label": "Tension sortie (Vout)",
+              "unit": "V",
+              "default": 2.5,
+              "formula": "(position / 1023) * vcc"
+            },
+            {
+              "id": "position",
+              "label": "Position ADC (0-1023)",
+              "unit": "",
+              "default": 512,
+              "formula": "(vout / vcc) * 1023"
+            },
+            {
+              "id": "vcc",
+              "label": "Tension source (Vcc)",
+              "unit": "V",
+              "default": 5,
+              "formula": "vout / (position / 1023)"
+            }
+          ]
+        },
+        "code": "int potPin = A0;\nint value = analogRead(potPin); // 0-1023\nint mapped = map(value, 0, 1023, 0, 255); // Conversion 0-255"
+      }
+    },
+    {
+      "id": "resistor-10",
+      "componentId": "resistor-10",
+      "categoryId": "resistor",
+      "name": "Résistance 10Ω",
+      "category": "Résistances",
+      "icon": "⚡",
+      "quantity": 1,
+      "data": {
+        "id": "resistor-10",
+        "name": "Résistance 10Ω",
+        "value": 10,
+        "displayValue": "10Ω",
+        "tolerance": "±5%",
+        "power": "0.25W",
+        "colorCode": "Marron-Noir-Noir-Or",
+        "price": 0.05,
+        "buyLink": "https://www.amazon.fr/s?k=résistance+10ohm",
+        "symbole": "images/composants/Resistances/_shared/symbole/symbole.png",
+        "description": "Résistance de 10Ω, utilisée pour limiter le courant ou créer des diviseurs de tension.",
+        "usage": "Limitation de courant, pull-up/pull-down, diviseur de tension, protection de composants.",
+        "pinoutFolder": "images/composants/Resistances/_shared/brochage",
+        "footprintFolder": "images/composants/Resistances/_shared/empreinte",
+        "formula": "Loi d'Ohm: I = V / R\nPuissance: P = V² / R\nAvec R = 10Ω",
+        "calculator": {
+          "variables": [
+            {
+              "id": "i",
+              "label": "Courant (I)",
+              "unit": "A",
+              "default": "0.500",
+              "formula": "v / 10"
+            },
+            {
+              "id": "v",
+              "label": "Tension (V)",
+              "unit": "V",
+              "default": 5,
+              "formula": "i * 10"
+            },
+            {
+              "id": "p",
+              "label": "Puissance (P)",
+              "unit": "W",
+              "default": "2.500",
+              "formula": "v * v / 10"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "createdAt": "2026-01-08T09:29:12.782Z",
+  "updatedAt": "2026-01-09T08:42:50.742Z",
+  "category": "actuator",
+  "difficulty": "beginner",
+  "tags": [],
+  "favorite": true
+}
