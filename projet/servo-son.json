@@ -181,7 +181,7 @@
     }
   ],
   "createdAt": "2026-01-08T09:29:12.782Z",
-  "updatedAt": "2026-01-09T08:42:50.742Z",
+  "updatedAt": "2026-01-10T17:07:01.889Z",
   "category": "actuator",
   "difficulty": "beginner",
   "tags": [],
@@ -193,5 +193,8 @@
       "checklist": [],
       "images": []
     }
+  ],
+  "boards": [
+    "mega"
   ]
 }

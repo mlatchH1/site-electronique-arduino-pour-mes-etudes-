@@ -3517,7 +3517,16 @@ async function exportExcelProfessional(f) {
         workbook.modified = new Date();
         workbook.properties.date1904 = true;
         
-        const totalCost = calculateProjectCost(f);
+        // Calculer UNIQUEMENT le prix des composants (sans la carte)
+        let componentsOnlyCost = 0;
+        f.components.forEach(comp => {
+            const category = componentCategories.find(c => c.id === comp.categoryId);
+            const compId = comp.componentId || comp.id;
+            const fullComponent = category?.components.find(c => c.id === compId);
+            const price = fullComponent?.price || 0;
+            const quantity = comp.quantity || 1;
+            componentsOnlyCost += price * quantity;
+        });
         
         // Analyser les composants
         const componentsByCategory = {};
@@ -3554,7 +3563,7 @@ async function exportExcelProfessional(f) {
         const mostExpensiveCat = categories.sort((a, b) => b.total - a.total)[0];
         
         // === ONGLET 1: DASHBOARD COMPOSANTS ===
-        const dashboard = workbook.addWorksheet('📊 Dashboard', {
+        const dashboard = workbook.addWorksheet('Dashboard', {
             properties: { tabColor: { argb: 'FF6366F1' } },
             views: [{ showGridLines: false }]
         });
@@ -3562,26 +3571,108 @@ async function exportExcelProfessional(f) {
         // Titre principal
         dashboard.mergeCells('A1:E2');
         const mainTitle = dashboard.getCell('A1');
-        mainTitle.value = '🛒 LISTE D\'ACHAT - ' + f.name.toUpperCase();
+        mainTitle.value = 'LISTE D\'ACHAT - ' + f.name.toUpperCase();
         mainTitle.font = { name: 'Segoe UI', size: 20, bold: true, color: { argb: 'FFFFFFFF' } };
         mainTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
         mainTitle.alignment = { vertical: 'middle', horizontal: 'center' };
         dashboard.getRow(1).height = 35;
         dashboard.getRow(2).height = 35;
         
-        // Info cartes
-        dashboard.mergeCells('A3:E3');
-        const cardsInfo = dashboard.getCell('A3');
-        cardsInfo.value = '🔧 Compatible: ' + (f.boards?.join(', ') || 'Non spécifié');
-        cardsInfo.font = { size: 11, bold: true, color: { argb: 'FF64748B' } };
-        cardsInfo.alignment = { horizontal: 'center' };
-        dashboard.getRow(3).height = 20;
+        let row = 4;
+        let boardCost = 0;
+        let boardStartRow = 0;
+        let boardEndRow = 0;
         
-        // Liste des composants à acheter
-        let row = 5;
+        // === SECTION 1 : CARTE ARDUINO ===
+        if (f.boards && f.boards.length > 0) {
+            // Titre section Carte
+            dashboard.mergeCells(`A${row}:E${row}`);
+            const carteTitle = dashboard.getCell(`A${row}`);
+            carteTitle.value = 'CARTE ARDUINO';
+            carteTitle.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+            carteTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF8B5CF6' } };
+            carteTitle.alignment = { vertical: 'middle', horizontal: 'center' };
+            dashboard.getRow(row).height = 25;
+            row++;
+            
+            // En-têtes pour la carte
+            const headersBoard = ['Qté', 'Carte', 'Type', 'Prix Unit.', 'Prix Total'];
+            headersBoard.forEach((h, idx) => {
+                const cell = dashboard.getCell(row, idx + 1);
+                cell.value = h;
+                cell.font = { bold: true, size: 10 };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE9D5FF' } };
+                cell.alignment = { horizontal: 'center' };
+                cell.border = {
+                    top: {style:'thin'}, left: {style:'thin'},
+                    bottom: {style:'thin'}, right: {style:'thin'}
+                };
+            });
+            row++;
+            
+            boardStartRow = row;
+            
+            // Afficher la carte
+            f.boards.forEach((boardId) => {
+                const board = arduinoBoards.find(b => b.id === boardId);
+                if (board) {
+                    const boardPrice = board.price || 0;
+                    boardCost += boardPrice;
+                    
+                    const bgColor = 'FFF3E8FF'; // Violet clair pour la carte
+                    
+                    // Qté
+                    const qtyCell = dashboard.getCell(`A${row}`);
+                    qtyCell.value = 1;
+                    qtyCell.alignment = { horizontal: 'center' };
+                    qtyCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                    qtyCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                    
+                    // Carte
+                    const nameCell = dashboard.getCell(`B${row}`);
+                    nameCell.value = board.name;
+                    nameCell.font = { bold: true, size: 11 };
+                    nameCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                    nameCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                    
+                    // Type
+                    const catCell = dashboard.getCell(`C${row}`);
+                    catCell.value = board.microcontroller || 'Arduino';
+                    catCell.font = { bold: true };
+                    catCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                    catCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                    
+                    // Prix unitaire
+                    const priceCell = dashboard.getCell(`D${row}`);
+                    priceCell.value = boardPrice;
+                    priceCell.numFmt = '#,##0.00 "€"';
+                    priceCell.alignment = { horizontal: 'right' };
+                    priceCell.font = { bold: true };
+                    priceCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                    priceCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                    
+                    // Prix total (FORMULE)
+                    const totalCell = dashboard.getCell(`E${row}`);
+                    totalCell.value = { formula: `A${row}*D${row}` };
+                    totalCell.numFmt = '#,##0.00 "€"';
+                    totalCell.alignment = { horizontal: 'right' };
+                    totalCell.font = { bold: true, color: { argb: 'FF8B5CF6' } };
+                    totalCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                    totalCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                    
+                    boardEndRow = row;
+                    row++;
+                }
+            });
+            
+            row++; // Espace entre les sections
+        }
+        
+        // === SECTION 2 : COMPOSANTS ===
+        const componentsStartRow = row + 2; // +2 pour titre et en-têtes
         dashboard.mergeCells(`A${row}:E${row}`);
         const listTitle = dashboard.getCell(`A${row}`);
-        listTitle.value = '📦 COMPOSANTS À ACHETER';
+        listTitle.value = 'COMPOSANTS';
         listTitle.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
         listTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF475569' } };
         listTitle.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -3603,58 +3694,8 @@ async function exportExcelProfessional(f) {
         });
         row++;
         
-        // 1. AFFICHER LA CARTE EN PREMIER
-        let totalWithBoard = totalCost;
-        if (f.boards && f.boards.length > 0) {
-            f.boards.forEach((boardId, idx) => {
-                const board = arduinoBoards.find(b => b.id === boardId);
-                if (board && board.price) {
-                    const bgColor = 'FFFEF3C7'; // Jaune pour la carte
-                    
-                    // Qté
-                    const qtyCell = dashboard.getCell(`A${row}`);
-                    qtyCell.value = 1;
-                    qtyCell.alignment = { horizontal: 'center' };
-                    qtyCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
-                    qtyCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                    
-                    // Carte
-                    const nameCell = dashboard.getCell(`B${row}`);
-                    nameCell.value = board.icon + ' ' + board.name;
-                    nameCell.font = { bold: true, size: 11 };
-                    nameCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
-                    nameCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                    
-                    // Catégorie
-                    const catCell = dashboard.getCell(`C${row}`);
-                    catCell.value = 'Carte Arduino';
-                    catCell.font = { bold: true };
-                    catCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
-                    catCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                    
-                    // Prix unitaire
-                    const priceCell = dashboard.getCell(`D${row}`);
-                    priceCell.value = board.price.toFixed(2) + ' €';
-                    priceCell.alignment = { horizontal: 'right' };
-                    priceCell.font = { bold: true };
-                    priceCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
-                    priceCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                    
-                    // Prix total
-                    const totalCell = dashboard.getCell(`E${row}`);
-                    totalCell.value = board.price.toFixed(2) + ' €';
-                    totalCell.alignment = { horizontal: 'right' };
-                    totalCell.font = { bold: true, color: { argb: 'FFFBBF24' } };
-                    totalCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
-                    totalCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
-                    
-                    totalWithBoard += board.price;
-                    row++;
-                }
-            });
-        }
-        
-        // 2. PUIS AFFICHER LES COMPOSANTS
+        // AFFICHER LES COMPOSANTS
+        console.log('DEBUG - f.boards:', f.boards);
         f.components.forEach((comp, idx) => {
             const category = componentCategories.find(c => c.id === comp.categoryId);
             const compId = comp.componentId || comp.id;
@@ -3687,15 +3728,17 @@ async function exportExcelProfessional(f) {
                 
                 // Prix unitaire
                 const priceCell = dashboard.getCell(`D${row}`);
-                priceCell.value = price.toFixed(2) + ' €';
+                priceCell.value = price;
+                priceCell.numFmt = '#,##0.00 "€"';
                 priceCell.alignment = { horizontal: 'right' };
                 priceCell.font = { bold: true };
                 priceCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
                 priceCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
                 
-                // Prix total
+                // Prix total (FORMULE)
                 const totalCell = dashboard.getCell(`E${row}`);
-                totalCell.value = total.toFixed(2) + ' €';
+                totalCell.value = { formula: `A${row}*D${row}` };
+                totalCell.numFmt = '#,##0.00 "€"';
                 totalCell.alignment = { horizontal: 'right' };
                 totalCell.font = { bold: true, color: { argb: 'FF10B981' } };
                 totalCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
@@ -3705,18 +3748,47 @@ async function exportExcelProfessional(f) {
             }
         });
         
-        // Total final
+        const componentsEndRow = row - 1;
+        
+        // Sous-total composants uniquement (FORMULE)
+        row++;
+        dashboard.mergeCells(`A${row}:D${row}`);
+        const compLabel = dashboard.getCell(`A${row}`);
+        compLabel.value = 'Total Composants';
+        compLabel.font = { bold: true, size: 12, color: { argb: 'FF1E293B' } };
+        compLabel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+        compLabel.alignment = { horizontal: 'right', vertical: 'middle' };
+        compLabel.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        
+        const compTotal = dashboard.getCell(`E${row}`);
+        compTotal.value = { formula: `SUM(E${componentsStartRow}:E${componentsEndRow})` };
+        compTotal.numFmt = '#,##0.00 "€"';
+        compTotal.font = { bold: true, size: 12, color: { argb: 'FF10B981' } };
+        compTotal.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+        compTotal.alignment = { horizontal: 'right', vertical: 'middle' };
+        compTotal.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+        dashboard.getRow(row).height = 25;
+        
+        const totalComposantsRow = row;
+        
+        // Total général (carte + composants) (FORMULE)
         row++;
         dashboard.mergeCells(`A${row}:D${row}`);
         const finalLabel = dashboard.getCell(`A${row}`);
-        finalLabel.value = '💎 TOTAL';
+        finalLabel.value = 'TOTAL GÉNÉRAL';
         finalLabel.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
         finalLabel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
         finalLabel.alignment = { horizontal: 'right', vertical: 'middle' };
         finalLabel.border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'thin'} };
         
         const finalTotal = dashboard.getCell(`E${row}`);
-        finalTotal.value = totalWithBoard.toFixed(2) + ' €';
+        // Si carte existe, additionner carte + composants, sinon juste composants
+        if (boardStartRow > 0 && boardEndRow > 0) {
+            finalTotal.value = { formula: `SUM(E${boardStartRow}:E${boardEndRow})+E${totalComposantsRow}` };
+        } else {
+            finalTotal.value = { formula: `E${totalComposantsRow}` };
+        }
+        finalTotal.numFmt = '#,##0.00 "€"';
         finalTotal.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
         finalTotal.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
         finalTotal.alignment = { horizontal: 'right', vertical: 'middle' };
@@ -3727,8 +3799,8 @@ async function exportExcelProfessional(f) {
         dashboard.getColumn('A').width = 8;
         dashboard.getColumn('B').width = 35;
         dashboard.getColumn('C').width = 20;
-        dashboard.getColumn('D').width = 12;
-        dashboard.getColumn('E').width = 12;
+        dashboard.getColumn('D').width = 14;
+        dashboard.getColumn('E').width = 16;
         
         // === ONGLET 2: LISTE COMPOSANTS AVEC FORMULES ===
         const compSheet = workbook.addWorksheet('🛠️ Composants', {
@@ -4477,17 +4549,29 @@ function openFolder(i) {
 
 // Calculer le coût total du projet
 function calculateProjectCost(project) {
-    if (!project.components || project.components.length === 0) return 0;
-    
     let totalCost = 0;
-    project.components.forEach(comp => {
-        const category = componentCategories.find(c => c.id === comp.categoryId);
-        const compId = comp.componentId || comp.id;
-        const fullComponent = category?.components.find(c => c.id === compId);
-        const price = fullComponent?.price || 0;
-        const quantity = comp.quantity || 1;
-        totalCost += price * quantity;
-    });
+    
+    // Ajouter le prix de la carte Arduino si elle existe
+    if (project.boards && project.boards.length > 0) {
+        project.boards.forEach(boardId => {
+            const board = arduinoBoards.find(b => b.id === boardId);
+            if (board && board.price) {
+                totalCost += board.price;
+            }
+        });
+    }
+    
+    // Ajouter le prix des composants
+    if (project.components && project.components.length > 0) {
+        project.components.forEach(comp => {
+            const category = componentCategories.find(c => c.id === comp.categoryId);
+            const compId = comp.componentId || comp.id;
+            const fullComponent = category?.components.find(c => c.id === compId);
+            const price = fullComponent?.price || 0;
+            const quantity = comp.quantity || 1;
+            totalCost += price * quantity;
+        });
+    }
     
     return totalCost;
 }
@@ -4511,40 +4595,13 @@ function renderProjectComponents() {
     const container = document.getElementById('project-components');
     let html = '';
     
-    // 1. AFFICHER LA CARTE EN PREMIER
-    if (f.boards && f.boards.length > 0) {
-        const boardId = f.boards[0];
-        const board = arduinoBoards.find(b => b.id === boardId);
-        if (board) {
-            const price = board.price || 0;
-            const buyLink = board.buyLink || '';
-            const priceDisplay = price && buyLink ? 
-                `<a href="${buyLink}" target="_blank" onclick="event.stopPropagation();" style="color:#fbbf24; text-decoration:none; font-size:12px; font-weight:bold;" title="Acheter sur Amazon">
-                    💰 ${price.toFixed(2)} €
-                </a>` : '';
-            
-            html += `
-            <div class="folder-item" style="margin-bottom:12px; padding:10px; border-left:3px solid #fbbf24; background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%);" onclick="showBoardDetail('${boardId}')">
-                <div class="folder-thumb" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; font-size:32px;">
-                    ${board.icon}
-                </div>
-                <div style="flex:1">
-                    <b style="font-size:13px;">🔧 ${board.name}</b><br>
-                    <span style="font-size:10px; opacity:0.6;">Carte Arduino</span>
-                    ${priceDisplay ? `<br>${priceDisplay}` : ''}
-                </div>
-            </div>`;
-        }
+    // AFFICHER LES COMPOSANTS
+    if (f.components.length === 0) {
+        container.innerHTML = '<p style="color:#94a3b8; font-size:12px; font-style:italic;">Aucun composant ajouté</p>';
+        return;
     }
     
-    // 2. PUIS AFFICHER LES COMPOSANTS
-    if (f.components.length === 0) {
-        if (!html) {
-            container.innerHTML = '<p style="color:#94a3b8; font-size:12px; font-style:italic;">Aucun composant ajouté</p>';
-            return;
-        }
-    } else {
-        html += f.components.map((comp, idx) => {
+    html = f.components.map((comp, idx) => {
         // Construire le chemin de l'image du composant
         const category = componentCategories.find(c => c.id === comp.categoryId);
         const compId = comp.componentId || comp.id; // Fallback pour anciens projets
@@ -4580,8 +4637,7 @@ function renderProjectComponents() {
             <button onclick="removeProjectComponent(${idx}); event.stopPropagation();" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:5px; font-size:11px;">✕</button>
         </div>
     `;
-        }).join('');
-    }
+    }).join('');
     
     container.innerHTML = html;
 }

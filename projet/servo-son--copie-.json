@@ -4,7 +4,9 @@
   "category": "actuator",
   "difficulty": "beginner",
   "tags": [],
-  "boards": [],
+  "boards": [
+    "mega"
+  ],
   "favorite": false,
   "notes": "",
   "code": "#include <Servo.h>\n\nconst int potar = 0;\nServo monServo;\n\nint tring = 3;\nint echo = 2;\nlong echo_read;\nlong cm;\n\nvoid setup() {\n  pinMode(tring, OUTPUT);\n  pinMode(echo, INPUT);\n\n  Serial.begin(9600);\n  monServo.attach(9, 750, 2200);\n  \n  Serial.println(\"Commandes : 'h' pour capteur, 's' pour servo, 'x' pour stopper\");\n}\n\nvoid loop() {\n  if (Serial.available() > 0) {\n    char touche = Serial.read();\n\n    if (touche == 'h') {\n      capteur();\n    }\n\n    if (touche == 's') {\n      Serial.println(\"Mode SERVO active. Tapez 'x' pour l'arreter.\");\n      \n      // La boucle continue tant qu'on ne reçoit pas 'x'\n      bool continuer = true;\n      while (continuer) {\n        servo(); // On exécute la fonction servo\n\n        // On vérifie à CHAQUE passage si une touche est pressée\n        if (Serial.available() > 0) {\n          char reset = Serial.read();\n          if (reset == 'x') { // On utilise 'x' pour stopper (plus simple qu'un mot complet)\n            Serial.println(\"Arret : Retour au menu principal\");\n            continuer = false; \n          }\n        }\n      }\n    }\n  }\n}\n\nvoid capteur() {\n  digitalWrite(tring, LOW);\n  delayMicroseconds(2);\n  digitalWrite(tring, HIGH);\n  delayMicroseconds(10);\n  digitalWrite(tring, LOW);\n\n  echo_read = pulseIn(echo, HIGH);\n  cm = echo_read / 58;\n\n  Serial.print(\"Distance en cm : \");\n  Serial.println(cm);\n}\n\nvoid servo() {\n  int val = analogRead(potar);\n  int angle = map(val, 0, 1023, 0, 180);\n  monServo.write(angle);\n  Serial.print(\"Angle Servo : \");\n  Serial.println(angle);\n  delay(100); // Petit délai pour la stabilité\n}",
@@ -183,8 +185,92 @@
           ]
         }
       }
+    },
+    {
+      "id": "led-red",
+      "componentId": "led-red",
+      "categoryId": "eclairage",
+      "name": "LED Rouge 5mm",
+      "category": "Éclairage",
+      "icon": "💡",
+      "quantity": 44,
+      "data": {
+        "id": "led-red",
+        "name": "LED Rouge 5mm",
+        "voltage": "1.8-2.2V",
+        "current": "20 mA",
+        "wavelength": "620-625 nm",
+        "price": 0.08,
+        "buyLink": "https://www.amazon.fr/s?k=led+rouge+5mm+arduino",
+        "symbole": "images/composants/led/_shared/symbole/symbole.png",
+        "description": "LED standard rouge, la plus courante dans les projets électroniques. Tension de seuil typique de 2V.",
+        "usage": "Utilisée comme indicateur d'état, alarme visuelle, décoration. Toujours utiliser avec une résistance de limitation de courant.",
+        "pinout": "Anode (+) : patte longue\nCathode (-) : patte courte, côté plat",
+        "pinoutFolder": "images/composants/led/_shared/brochage",
+        "footprint": "Espacement des pattes: 2.54mm (0.1\")\nDiamètre du corps: 5mm\nHauteur totale: ~8.5mm",
+        "footprintFolder": "images/composants/led/_shared/empreinte",
+        "formula": "R = (Vcc - Vled) / I",
+        "calculator": {
+          "variables": [
+            {
+              "id": "r",
+              "label": "Résistance (R)",
+              "unit": "Ω",
+              "default": 150,
+              "formula": "(vcc - vled) / i"
+            },
+            {
+              "id": "vcc",
+              "label": "Tension source (Vcc)",
+              "unit": "V",
+              "default": 5,
+              "formula": "(r * i) + vled"
+            },
+            {
+              "id": "i",
+              "label": "Courant (I)",
+              "unit": "A",
+              "default": 0.02,
+              "formula": "(vcc - vled) / r"
+            },
+            {
+              "id": "vled",
+              "label": "Tension LED (Vled)",
+              "unit": "V",
+              "default": 2,
+              "fixed": true,
+              "formula": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "buzzer-active",
+      "componentId": "buzzer-active",
+      "categoryId": "audio",
+      "name": "Buzzer actif",
+      "category": "Audio",
+      "icon": "🔊",
+      "quantity": 2054,
+      "data": {
+        "id": "buzzer-active",
+        "name": "Buzzer actif",
+        "voltage": "3.5-5V",
+        "frequency": "Fixe (~2kHz)",
+        "price": 0.5,
+        "buyLink": "https://www.amazon.fr/s?k=buzzer+actif+5v+arduino",
+        "symbole": "images/composants/Audio/buzzer-active/symbole/symbole.png",
+        "description": "Buzzer avec oscillateur intégré, émet un son fixe quand alimenté.",
+        "usage": "Alarmes, notifications simples, bips. Brancher directement sur une sortie digitale.",
+        "pinout": "+ (long/marqué rouge) : signal 5V\n- (court) : GND",
+        "pinoutFolder": "images/composants/Audio/buzzer-active/brochage",
+        "footprint": "Diamètre: 12mm\nHauteur: 9.5mm",
+        "footprintFolder": "images/composants/Audio/buzzer-active/empreinte",
+        "code": "int buzzerPin = 8;\npinMode(buzzerPin, OUTPUT);\ndigitalWrite(buzzerPin, HIGH); // Son ON\ndelay(1000);\ndigitalWrite(buzzerPin, LOW); // Son OFF"
+      }
     }
   ],
   "createdAt": "2026-01-09T18:12:01.015Z",
-  "updatedAt": "2026-01-09T18:12:01.015Z"
+  "updatedAt": "2026-01-10T16:50:44.848Z"
 }
