@@ -1,120 +1,121 @@
-# 🎛️ Site Arduino - Composants & Projets
+# 🔌 Site Électronique Arduino - Gestionnaire de Projets
 
-Site web interactif pour apprendre l'électronique Arduino avec HTML, CSS et JavaScript.
+Application web complète pour gérer et documenter vos projets électroniques Arduino.
 
-## 📋 Fonctionnalités
+## ✨ Fonctionnalités
 
-### 🏠 Accueil
-- Accès rapide aux 2 cartes Arduino (Uno, Nano ESP32)
-- Catalogue de 10+ composants électroniques avec schémas
-- Interface moderne et intuitive
-- Navigation fluide entre les sections
+### 📁 Gestion de Projets
+- Création, édition et suppression de projets
+- Organisation par catégories (Robotique, Domotique, IoT, etc.)
+- Niveaux de difficulté (Débutant, Intermédiaire, Avancé)
+- Tags personnalisables
+- Photos de projets
+- Historique des projets récents
 
-### 📂 Projets
-- Création et gestion illimitée de projets Arduino
-- Ajout de photos, notes techniques et code C++
-- Association de composants aux projets
-- **Sauvegarde locale (localStorage)** avec export/import JSON
-- Historique et suivi des projets
+### 🛠️ Cartes Arduino
+- **Arduino Uno R3** (25.00 €) - Idéale pour débuter
+- **Arduino Mega 2560** (45.00 €) - Pour projets complexes
+- **Arduino Nano ESP32** (18.00 €) - WiFi/Bluetooth intégré
+- Fiches techniques détaillées avec pinout
+- Sélection de carte par projet
 
-### 🧮 Formules (37 calculatrices)
-**Électricité (13)** : Loi d'Ohm, puissance, effet Joule, résistances (série/parallèle), condensateurs, inductances, réactances, impédance RLC, résonance LC...
+### 📦 Base de Composants (158 composants)
+- **Éclairage** : LEDs (rouge, verte, bleue, blanche, jaune, RGB)
+- **Capteurs** : DHT11, HC-SR04, LDR, PIR, etc.
+- **Actionneurs** : Servomoteur SG90, relais 5V
+- **Audio** : Buzzers actif/passif
+- **Résistances** : Toutes valeurs E12/E24 (10Ω à 10MΩ)
+- **Circuits Intégrés** : 74HC595
+- **Condensateurs** : 100nF, 1000µF
+- **Entrées** : Boutons poussoirs, potentiomètres
 
-**Microcontrôleur (9)** : ADC 12 bits, pont diviseur, résistance LED, PWM, autonomie batterie, servo, buzzer, moteur DC, pull-up...
+### 💰 Gestion des Coûts
+- Prix pour 74+ composants
+- Calcul automatique du coût total par projet
+- Liens d'achat Amazon
+- Export Excel professionnel avec formules
 
-**Radio/RF (4)** : Antenne quart d'onde, dBm→mW, longueur d'onde, perte de propagation...
+### 📊 Export Excel Professionnel
+- **Dashboard** : Liste d'achat avec carte et composants
+- **Onglet Composants** : Formules Excel automatiques, protection, mise en forme conditionnelle
+- **Onglet Code** : Code Arduino formaté
+- **Onglet Notes** : Pinout et schémas
+- **Onglet Instructions** : Mode d'emploi
 
-**Signal (5)** : Filtre RC, gains dB (tension/puissance), Nyquist-Shannon, constante RC...
+### 🔧 Outils Avancés
+- **Calculateurs** : Résistances LED, diviseur de tension, condensateurs, etc.
+- **Formules électroniques** : Loi d'Ohm, puissance, conversions
+- **Favoris** : Sauvegarde des composants fréquemment utilisés
+- **Recherche avancée** : Par nom, catégorie, caractéristiques
 
-**Ingénierie (3)** : Température de jonction, couple moteur, loi de Pouillet (résistivité)...
+### 💻 Code Arduino
+- Éditeur de code intégré
+- Copie rapide vers IDE Arduino
+- Sauvegarde avec le projet
 
-### 🎛️ Cartes Arduino (2)
-**Arduino Uno** : ATmega328P, 5V, 16 MHz, 14 GPIO, 6 ADC 10 bits, USB Type-B
+## 🚀 Installation
 
-**Arduino Nano ESP32** : ESP32-S3, 3.3V, 240 MHz, WiFi/Bluetooth, 21 GPIO, 8 ADC 12 bits, USB-C
+1. Télécharger tous les fichiers du projet
+2. Ouvrir `index.html` dans un navigateur moderne (Chrome, Firefox, Edge)
+3. Accepter l'accès au système de fichiers pour sauvegarder les projets
 
-### ⚡ Composants (10+)
-**LED** : Rouge 5mm, RGB commune cathode
-
-**Résistances** : 220Ω, 10kΩ (code couleur)
-
-**Condensateurs** : Céramique 100nF, électrolytique 1000µF
-
-**Capteurs** : DHT11 (température/humidité), HC-SR04 (ultrason)
-
-**Actionneurs** : Servo SG90, relais 5V 10A
-
-**CI** : 74HC595 (registre à décalage)
-
-## 💾 Sauvegarde des projets
-
-### ⚠️ Important
-Les projets sont stockés dans le **localStorage du navigateur**. Attention : si vous changez de méthode d'accès (file:// ↔ http://localhost), vous ne verrez pas les mêmes projets !
-
-### ✅ Export/Import
-
-#### 💾 Exporter vos projets
-1. Cliquez sur l'icône **📶** (menu en haut à droite)
-2. **"💾 Sauvegarder les projets"**
-3. Un fichier JSON est téléchargé : `mes-projets-arduino-YYYY-MM-DD.json`
-4. **Conservez-le précieusement !**
-
-#### 📥 Importer vos projets
-1. Icône **📶** → **"📥 Restaurer les projets"**
-2. Sélectionnez votre fichier `.json`
-3. Confirmez la restauration
-
-### 💡 Bonnes pratiques
-✅ Exportez après chaque modification importante  
-✅ Gardez plusieurs sauvegardes datées  
-✅ Sauvegardez sur le cloud (Drive, Dropbox...)  
-✅ **Avant de changer de navigateur/serveur : EXPORTEZ !**
-
----
-
-## 🚀 Utilisation
-
-### Méthode 1 : Fichier local
-Double-cliquez sur `index.html` → Ouvre avec `file://`
-
-### Méthode 2 : Serveur local (recommandé)
-```bash
-python -m http.server 8000
-# Puis : http://localhost:8000
-```
-
-⚠️ **localStorage différent entre file:// et http:// !** Utilisez toujours export/import.
-
----
-
-## 📁 Structure du projet
+## 📂 Structure des Fichiers
 
 ```
 site-electronique-arduino/
-├── index.html          # Page principale
-├── script.js           # Logique (3200+ lignes)
-├── auto_save.bat       # Sauvegarde auto Git (Windows)
-├── images/
-│   ├── site/           # Logos, bannières
-│   └── composants/     # Schémas techniques (brochage/empatement)
-│       ├── led-rouge/
-│       ├── led-rgb/
-│       └── README.md   # Documentation structure
-└── projet/             # Exports JSON (git-ignoré)
+├── index.html              # Application principale
+├── script.js              # Logique JavaScript
+├── images/                # Images des composants et cartes
+│   ├── composants/        # Bibliothèque de composants
+│   └── cartes/            # Photos des cartes Arduino
+└── projet/                # Projets sauvegardés (JSON)
 ```
 
+## 🎯 Utilisation
+
+### Créer un Projet
+1. Cliquer sur "➕ NOUVEAU PROJET"
+2. Remplir les informations (nom, catégorie, difficulté)
+3. Sélectionner la carte Arduino utilisée
+4. Ajouter les composants nécessaires
+5. Insérer le code Arduino
+6. Sauvegarder
+
+### Exporter en Excel
+1. Ouvrir un projet
+2. Cliquer sur "📊 EXPORT CSV"
+3. Télécharger le fichier Excel professionnel avec formules
+
+### Utiliser les Calculateurs
+1. Aller dans "Calculateurs"
+2. Choisir le type de calcul
+3. Entrer les valeurs connues
+4. Obtenir le résultat instantané
+
+## 💡 Caractéristiques Techniques
+
+- **Technologie** : HTML5, CSS3, JavaScript ES6+
+- **Bibliothèques** : ExcelJS (export), FileSaver.js
+- **Stockage** : Local (File System Access API)
+- **Format** : JSON pour les projets
+- **Responsive** : Interface adaptée mobile/desktop
+
+## 🔄 Mises à Jour
+
+**Dernière version** : Janvier 2026
+- Système de cartes Arduino avec prix
+- Export Excel professionnel avec formules
+- 158 composants avec prix Amazon
+- Interface optimisée
+
+## 📝 Licence
+
+Projet éducatif - Libre d'utilisation
+
+## 👨‍💻 Support
+
+Pour toute question ou suggestion, ouvrir une issue sur le projet.
+
 ---
 
-## 🛠️ Technologies
-- **Frontend** : HTML5, CSS3, JavaScript vanilla
-- **Stockage** : localStorage (navigateur)
-- **Export** : JSON avec téléchargement automatique
-- **Images** : PNG (schémas techniques organisés par composant)
-
----
-
-## 📝 Notes
-- Projet éducatif pour apprendre Arduino et le web
-- Aucune dépendance externe (fonctionne offline)
-- Compatible tous navigateurs modernes
-- Code source commenté en français
+**Fait avec ❤️ pour les makers et étudiants Arduino**

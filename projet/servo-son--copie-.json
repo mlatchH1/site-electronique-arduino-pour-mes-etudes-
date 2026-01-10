@@ -1,6 +1,11 @@
 {
-  "name": "servo son",
+  "name": "servo son (copie)",
   "status": "En cours",
+  "category": "actuator",
+  "difficulty": "beginner",
+  "tags": [],
+  "boards": [],
+  "favorite": false,
   "notes": "",
   "code": "#include <Servo.h>\n\nconst int potar = 0;\nServo monServo;\n\nint tring = 3;\nint echo = 2;\nlong echo_read;\nlong cm;\n\nvoid setup() {\n  pinMode(tring, OUTPUT);\n  pinMode(echo, INPUT);\n\n  Serial.begin(9600);\n  monServo.attach(9, 750, 2200);\n  \n  Serial.println(\"Commandes : 'h' pour capteur, 's' pour servo, 'x' pour stopper\");\n}\n\nvoid loop() {\n  if (Serial.available() > 0) {\n    char touche = Serial.read();\n\n    if (touche == 'h') {\n      capteur();\n    }\n\n    if (touche == 's') {\n      Serial.println(\"Mode SERVO active. Tapez 'x' pour l'arreter.\");\n      \n      // La boucle continue tant qu'on ne reçoit pas 'x'\n      bool continuer = true;\n      while (continuer) {\n        servo(); // On exécute la fonction servo\n\n        // On vérifie à CHAQUE passage si une touche est pressée\n        if (Serial.available() > 0) {\n          char reset = Serial.read();\n          if (reset == 'x') { // On utilise 'x' pour stopper (plus simple qu'un mot complet)\n            Serial.println(\"Arret : Retour au menu principal\");\n            continuer = false; \n          }\n        }\n      }\n    }\n  }\n}\n\nvoid capteur() {\n  digitalWrite(tring, LOW);\n  delayMicroseconds(2);\n  digitalWrite(tring, HIGH);\n  delayMicroseconds(10);\n  digitalWrite(tring, LOW);\n\n  echo_read = pulseIn(echo, HIGH);\n  cm = echo_read / 58;\n\n  Serial.print(\"Distance en cm : \");\n  Serial.println(cm);\n}\n\nvoid servo() {\n  int val = analogRead(potar);\n  int angle = map(val, 0, 1023, 0, 180);\n  monServo.write(angle);\n  Serial.print(\"Angle Servo : \");\n  Serial.println(angle);\n  delay(100); // Petit délai pour la stabilité\n}",
   "img": "",
@@ -180,18 +185,6 @@
       }
     }
   ],
-  "createdAt": "2026-01-08T09:29:12.782Z",
-  "updatedAt": "2026-01-09T08:42:50.742Z",
-  "category": "actuator",
-  "difficulty": "beginner",
-  "tags": [],
-  "favorite": true,
-  "steps": [
-    {
-      "title": "test",
-      "description": "",
-      "checklist": [],
-      "images": []
-    }
-  ]
+  "createdAt": "2026-01-09T18:12:01.015Z",
+  "updatedAt": "2026-01-09T18:12:01.015Z"
 }

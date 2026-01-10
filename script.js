@@ -207,8 +207,10 @@ function customPrompt(message, defaultValue = '', title = 'Saisie') {
 const arduinoBoards = [
     {
         id: 'uno',
-        name: 'Arduino Uno',
+        name: 'Arduino Uno R3',
         icon: '🔵',
+        price: 25.00,
+        buyLink: 'https://www.amazon.fr/s?k=Arduino+Uno+R3',
         microcontroller: 'ATmega328P',
         voltage: '5V',
         clock: '16 MHz',
@@ -237,6 +239,8 @@ const arduinoBoards = [
         id: 'mega',
         name: 'Arduino Mega 2560',
         icon: '🔴',
+        price: 45.00,
+        buyLink: 'https://www.amazon.fr/s?k=Arduino+Mega+2560',
         microcontroller: 'ATmega2560',
         voltage: '5V',
         clock: '16 MHz',
@@ -267,6 +271,8 @@ const arduinoBoards = [
         id: 'nano-esp32',
         name: 'Arduino Nano ESP32',
         icon: '🟢',
+        price: 18.00,
+        buyLink: 'https://www.amazon.fr/s?k=Arduino+Nano+ESP32',
         microcontroller: 'ESP32-S3',
         voltage: '3.3V',
         clock: '240 MHz',
@@ -2876,8 +2882,12 @@ function showBoardDetail(boardId) {
     if (!board) return;
     
     document.getElementById('board-detail-title').innerText = board.name;
-    document.getElementById('board-detail-content').innerHTML = `
-        <div style="text-align:center; font-size:48px; margin:20px 0;">${board.icon}</div>
+    
+    // Affichage identique aux composants
+    let detailHTML = `
+        <div style="text-align:center; margin:20px 0;">
+            <div style="font-size:64px;">${board.icon}</div>
+        </div>
         
         <div class="card">
             <h3 style="color:var(--accent); margin-top:0;">📋 Description</h3>
@@ -2915,11 +2925,33 @@ function showBoardDetail(boardId) {
         </div>
 
         <div class="card">
-            <h3 style="color:var(--accent); margin-top:0;">🎯 Applications</h3>
+            <h3 style="color:var(--accent); margin-top:0;">💡 Applications</h3>
             <p>${board.applications}</p>
         </div>
     `;
+
+    // Prix et Achat - IDENTIQUE AUX COMPOSANTS
+    if (board.price !== undefined && board.buyLink) {
+        detailHTML += `
+        <div class="card" style="background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border:2px solid #f59e0b;">
+            <h3 style="color:#f59e0b; margin-top:0;">💰 Prix & Achat</h3>
+            <div style="text-align:center; margin:20px 0;">
+                <div style="font-size:36px; font-weight:bold; color:#fbbf24; margin-bottom:10px;">
+                    ${board.price.toFixed(2)} €
+                </div>
+                <a href="${board.buyLink}" target="_blank" 
+                   style="display:inline-block; background:#f59e0b; color:#0f172a; padding:12px 24px; border-radius:8px; text-decoration:none; font-weight:bold; font-size:14px; transition:all 0.3s;"
+                   onmouseover="this.style.background='#fbbf24';" onmouseout="this.style.background='#f59e0b';">
+                    🛒 ACHETER SUR AMAZON
+                </a>
+            </div>
+            <p style="font-size:11px; color:#94a3b8; text-align:center; margin-top:15px;">
+                ℹ️ Prix indicatif - Vérifier la disponibilité et le prix actuel sur Amazon
+            </p>
+        </div>`;
+    }
     
+    document.getElementById('board-detail-content').innerHTML = detailHTML;
     openModal('modal-board-detail');
 }
 
@@ -3460,6 +3492,572 @@ async function toggleFavorite(index) {
     renderFolders();
 }
 
+// Exporter la liste des composants en CSV
+function exportComponentsCSV() {
+    const f = db[currentIdx];
+    if (!f.components || f.components.length === 0) {
+        customAlert('Aucun composant dans ce projet !', 'Attention');
+        return;
+    }
+    
+    // Vérifier que ExcelJS est chargé
+    if (typeof ExcelJS === 'undefined') {
+        customAlert('Erreur : Bibliothèque Excel non chargée.\nVérifiez votre connexion internet.', 'Erreur');
+        return;
+    }
+    
+    exportExcelProfessional(f);
+}
+
+async function exportExcelProfessional(f) {
+    try {
+        const workbook = new ExcelJS.Workbook();
+        workbook.creator = 'ESP32 Lab Pro';
+        workbook.created = new Date();
+        workbook.modified = new Date();
+        workbook.properties.date1904 = true;
+        
+        const totalCost = calculateProjectCost(f);
+        
+        // Analyser les composants
+        const componentsByCategory = {};
+        const componentPrices = [];
+        
+        f.components.forEach(comp => {
+            const category = componentCategories.find(c => c.id === comp.categoryId);
+            const categoryName = category?.name || 'Autre';
+            const compId = comp.componentId || comp.id;
+            const fullComponent = category?.components.find(c => c.id === compId);
+            
+            if (fullComponent) {
+                const quantity = comp.quantity || 1;
+                const price = fullComponent.price || 0;
+                const total = price * quantity;
+                
+                componentPrices.push({ name: fullComponent.name, total, price, quantity });
+                
+                // Initialiser la catégorie si elle n'existe pas
+                if (!componentsByCategory[categoryName]) {
+                    componentsByCategory[categoryName] = { count: 0, total: 0, components: [] };
+                }
+                componentsByCategory[categoryName].count += quantity;
+                componentsByCategory[categoryName].total += total;
+                componentsByCategory[categoryName].components.push(comp);
+            }
+        });
+        
+        // Trouver le composant le plus cher
+        const mostExpensive = componentPrices.sort((a, b) => b.total - a.total)[0];
+        
+        // Trouver la catégorie la plus chère
+        const categories = Object.entries(componentsByCategory).map(([name, data]) => ({ name, ...data }));
+        const mostExpensiveCat = categories.sort((a, b) => b.total - a.total)[0];
+        
+        // === ONGLET 1: DASHBOARD COMPOSANTS ===
+        const dashboard = workbook.addWorksheet('📊 Dashboard', {
+            properties: { tabColor: { argb: 'FF6366F1' } },
+            views: [{ showGridLines: false }]
+        });
+        
+        // Titre principal
+        dashboard.mergeCells('A1:E2');
+        const mainTitle = dashboard.getCell('A1');
+        mainTitle.value = '🛒 LISTE D\'ACHAT - ' + f.name.toUpperCase();
+        mainTitle.font = { name: 'Segoe UI', size: 20, bold: true, color: { argb: 'FFFFFFFF' } };
+        mainTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
+        mainTitle.alignment = { vertical: 'middle', horizontal: 'center' };
+        dashboard.getRow(1).height = 35;
+        dashboard.getRow(2).height = 35;
+        
+        // Info cartes
+        dashboard.mergeCells('A3:E3');
+        const cardsInfo = dashboard.getCell('A3');
+        cardsInfo.value = '🔧 Compatible: ' + (f.boards?.join(', ') || 'Non spécifié');
+        cardsInfo.font = { size: 11, bold: true, color: { argb: 'FF64748B' } };
+        cardsInfo.alignment = { horizontal: 'center' };
+        dashboard.getRow(3).height = 20;
+        
+        // Liste des composants à acheter
+        let row = 5;
+        dashboard.mergeCells(`A${row}:E${row}`);
+        const listTitle = dashboard.getCell(`A${row}`);
+        listTitle.value = '📦 COMPOSANTS À ACHETER';
+        listTitle.font = { size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+        listTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF475569' } };
+        listTitle.alignment = { vertical: 'middle', horizontal: 'center' };
+        dashboard.getRow(row).height = 25;
+        row++;
+        
+        // En-têtes
+        const headers2 = ['Qté', 'Composant', 'Catégorie', 'Prix Unit.', 'Prix Total'];
+        headers2.forEach((h, idx) => {
+            const cell = dashboard.getCell(row, idx + 1);
+            cell.value = h;
+            cell.font = { bold: true, size: 10 };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+            cell.alignment = { horizontal: 'center' };
+            cell.border = {
+                top: {style:'thin'}, left: {style:'thin'},
+                bottom: {style:'thin'}, right: {style:'thin'}
+            };
+        });
+        row++;
+        
+        // 1. AFFICHER LA CARTE EN PREMIER
+        let totalWithBoard = totalCost;
+        if (f.boards && f.boards.length > 0) {
+            f.boards.forEach((boardId, idx) => {
+                const board = arduinoBoards.find(b => b.id === boardId);
+                if (board && board.price) {
+                    const bgColor = 'FFFEF3C7'; // Jaune pour la carte
+                    
+                    // Qté
+                    const qtyCell = dashboard.getCell(`A${row}`);
+                    qtyCell.value = 1;
+                    qtyCell.alignment = { horizontal: 'center' };
+                    qtyCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                    qtyCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                    
+                    // Carte
+                    const nameCell = dashboard.getCell(`B${row}`);
+                    nameCell.value = board.icon + ' ' + board.name;
+                    nameCell.font = { bold: true, size: 11 };
+                    nameCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                    nameCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                    
+                    // Catégorie
+                    const catCell = dashboard.getCell(`C${row}`);
+                    catCell.value = 'Carte Arduino';
+                    catCell.font = { bold: true };
+                    catCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                    catCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                    
+                    // Prix unitaire
+                    const priceCell = dashboard.getCell(`D${row}`);
+                    priceCell.value = board.price.toFixed(2) + ' €';
+                    priceCell.alignment = { horizontal: 'right' };
+                    priceCell.font = { bold: true };
+                    priceCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                    priceCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                    
+                    // Prix total
+                    const totalCell = dashboard.getCell(`E${row}`);
+                    totalCell.value = board.price.toFixed(2) + ' €';
+                    totalCell.alignment = { horizontal: 'right' };
+                    totalCell.font = { bold: true, color: { argb: 'FFFBBF24' } };
+                    totalCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                    totalCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                    
+                    totalWithBoard += board.price;
+                    row++;
+                }
+            });
+        }
+        
+        // 2. PUIS AFFICHER LES COMPOSANTS
+        f.components.forEach((comp, idx) => {
+            const category = componentCategories.find(c => c.id === comp.categoryId);
+            const compId = comp.componentId || comp.id;
+            const fullComponent = category?.components.find(c => c.id === compId);
+            
+            if (fullComponent) {
+                const quantity = comp.quantity || 1;
+                const price = fullComponent.price || 0;
+                const total = price * quantity;
+                const bgColor = idx % 2 === 0 ? 'FFFFFFFF' : 'FFF8FAFC';
+                
+                // Quantité
+                const qtyCell = dashboard.getCell(`A${row}`);
+                qtyCell.value = quantity;
+                qtyCell.alignment = { horizontal: 'center' };
+                qtyCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                qtyCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                
+                // Composant
+                const nameCell = dashboard.getCell(`B${row}`);
+                nameCell.value = fullComponent.name;
+                nameCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                nameCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                
+                // Catégorie
+                const catCell = dashboard.getCell(`C${row}`);
+                catCell.value = category?.name || 'Autre';
+                catCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                catCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                
+                // Prix unitaire
+                const priceCell = dashboard.getCell(`D${row}`);
+                priceCell.value = price.toFixed(2) + ' €';
+                priceCell.alignment = { horizontal: 'right' };
+                priceCell.font = { bold: true };
+                priceCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                priceCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                
+                // Prix total
+                const totalCell = dashboard.getCell(`E${row}`);
+                totalCell.value = total.toFixed(2) + ' €';
+                totalCell.alignment = { horizontal: 'right' };
+                totalCell.font = { bold: true, color: { argb: 'FF10B981' } };
+                totalCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bgColor } };
+                totalCell.border = { top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+                
+                row++;
+            }
+        });
+        
+        // Total final
+        row++;
+        dashboard.mergeCells(`A${row}:D${row}`);
+        const finalLabel = dashboard.getCell(`A${row}`);
+        finalLabel.value = '💎 TOTAL';
+        finalLabel.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+        finalLabel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
+        finalLabel.alignment = { horizontal: 'right', vertical: 'middle' };
+        finalLabel.border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'thin'} };
+        
+        const finalTotal = dashboard.getCell(`E${row}`);
+        finalTotal.value = totalWithBoard.toFixed(2) + ' €';
+        finalTotal.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+        finalTotal.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
+        finalTotal.alignment = { horizontal: 'right', vertical: 'middle' };
+        finalTotal.border = { top: {style:'medium'}, left: {style:'thin'}, bottom: {style:'medium'}, right: {style:'medium'} };
+        dashboard.getRow(row).height = 30;
+        
+        // Largeurs colonnes
+        dashboard.getColumn('A').width = 8;
+        dashboard.getColumn('B').width = 35;
+        dashboard.getColumn('C').width = 20;
+        dashboard.getColumn('D').width = 12;
+        dashboard.getColumn('E').width = 12;
+        
+        // === ONGLET 2: LISTE COMPOSANTS AVEC FORMULES ===
+        const compSheet = workbook.addWorksheet('🛠️ Composants', {
+            properties: { tabColor: { argb: 'FF10B981' } }
+        });
+        
+        // Titre
+        compSheet.mergeCells('A1:L1');
+        const title = compSheet.getCell('A1');
+        title.value = '🛠️ LISTE DES COMPOSANTS';
+        title.font = { size: 18, bold: true, color: { argb: 'FFFFFFFF' } };
+        title.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF10B981' } };
+        title.alignment = { vertical: 'middle', horizontal: 'center' };
+        compSheet.getRow(1).height = 35;
+        
+        // En-têtes (ligne 3)
+        const headers = [
+            '✓', 'Qté', 'Composant', 'Catégorie', 'Voltage', 'Courant', 'Type', 
+            'Référence', 'Fournisseur', 'Prix Unit.', 'Prix Total', 'Lien/Datasheet'
+        ];
+        
+        headers.forEach((header, idx) => {
+            const cell = compSheet.getCell(3, idx + 1);
+            cell.value = header;
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF475569' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+            cell.border = { 
+                top: {style:'medium'}, left: {style:'thin'}, 
+                bottom: {style:'medium'}, right: {style:'thin'} 
+            };
+        });
+        compSheet.getRow(3).height = 30;
+        
+        // Utiliser les composants déjà groupés
+        let currentRow = 4;
+        const dataStartRow = 4;
+        const categoryTotals = [];
+        
+        Object.keys(componentsByCategory).sort().forEach((categoryName, catIdx) => {
+            // Ligne de catégorie
+            compSheet.mergeCells(`A${currentRow}:L${currentRow}`);
+            const catCell = compSheet.getCell(`A${currentRow}`);
+            catCell.value = '📂 ' + categoryName.toUpperCase();
+            catCell.font = { bold: true, size: 12 };
+            catCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBBF24' } };
+            catCell.alignment = { vertical: 'middle', horizontal: 'left' };
+            compSheet.getRow(currentRow).height = 22;
+            currentRow++;
+            
+            const categoryStartRow = currentRow;
+            
+            componentsByCategory[categoryName].components.forEach((comp, idx) => {
+                const category = componentCategories.find(c => c.id === comp.categoryId);
+                const compId = comp.componentId || comp.id;
+                const fullComponent = category?.components.find(c => c.id === compId);
+                
+                if (fullComponent) {
+                    const quantity = comp.quantity || 1;
+                    const price = fullComponent.price || 0;
+                    const rowColor = idx % 2 === 0 ? 'FFFFFFFF' : 'FFF8FAFC';
+                    
+                    // Checkbox acheté
+                    const checkCell = compSheet.getCell(`A${currentRow}`);
+                    checkCell.value = '☐';
+                    checkCell.font = { size: 14 };
+                    checkCell.alignment = { horizontal: 'center' };
+                    checkCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowColor } };
+                    
+                    // Quantité
+                    const qtyCell = compSheet.getCell(`B${currentRow}`);
+                    qtyCell.value = quantity;
+                    qtyCell.alignment = { horizontal: 'center' };
+                    qtyCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowColor } };
+                    
+                    // Composant
+                    compSheet.getCell(`C${currentRow}`).value = fullComponent.name || '';
+                    compSheet.getCell(`C${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowColor } };
+                    
+                    // Catégorie
+                    compSheet.getCell(`D${currentRow}`).value = categoryName;
+                    compSheet.getCell(`D${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowColor } };
+                    
+                    // Voltage
+                    compSheet.getCell(`E${currentRow}`).value = fullComponent.voltage || '-';
+                    compSheet.getCell(`E${currentRow}`).alignment = { horizontal: 'center' };
+                    compSheet.getCell(`E${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowColor } };
+                    
+                    // Courant
+                    compSheet.getCell(`F${currentRow}`).value = fullComponent.current || '-';
+                    compSheet.getCell(`F${currentRow}`).alignment = { horizontal: 'center' };
+                    compSheet.getCell(`F${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowColor } };
+                    
+                    // Type
+                    compSheet.getCell(`G${currentRow}`).value = fullComponent.type || '-';
+                    compSheet.getCell(`G${currentRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowColor } };
+                    
+                    // Référence (modifiable)
+                    const refCell = compSheet.getCell(`H${currentRow}`);
+                    refCell.value = fullComponent.reference || '';
+                    refCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFACD' } };
+                    
+                    // Fournisseur (liste déroulante)
+                    const supplierCell = compSheet.getCell(`I${currentRow}`);
+                    supplierCell.value = 'Amazon';
+                    supplierCell.dataValidation = {
+                        type: 'list',
+                        allowBlank: true,
+                        formulae: ['"Amazon,AliExpress,Mouser,DigiKey,Farnell,RS Components"']
+                    };
+                    supplierCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFACD' } };
+                    
+                    // Prix unitaire
+                    const priceCell = compSheet.getCell(`J${currentRow}`);
+                    priceCell.value = price;
+                    priceCell.numFmt = '#,##0.00 €';
+                    priceCell.alignment = { horizontal: 'right' };
+                    priceCell.font = { bold: true };
+                    priceCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowColor } };
+                    
+                    // Prix total (FORMULE)
+                    const totalCell = compSheet.getCell(`K${currentRow}`);
+                    totalCell.value = { formula: `B${currentRow}*J${currentRow}` };
+                    totalCell.numFmt = '#,##0.00 €';
+                    totalCell.alignment = { horizontal: 'right' };
+                    totalCell.font = { bold: true, color: { argb: 'FF10B981' } };
+                    totalCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowColor } };
+                    
+                    // Lien Amazon
+                    const linkCell = compSheet.getCell(`L${currentRow}`);
+                    if (fullComponent.buyLink) {
+                        linkCell.value = { 
+                            text: '🔗 Amazon',
+                            hyperlink: fullComponent.buyLink
+                        };
+                        linkCell.font = { color: { argb: 'FF0EA5E9' }, underline: true };
+                    }
+                    linkCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: rowColor } };
+                    
+                    // Bordures
+                    for (let col = 1; col <= 12; col++) {
+                        const cell = compSheet.getCell(currentRow, col);
+                        cell.border = { 
+                            top: {style:'thin', color: {argb: 'FFE2E8F0'}}, 
+                            left: {style:'thin', color: {argb: 'FFE2E8F0'}}, 
+                            bottom: {style:'thin', color: {argb: 'FFE2E8F0'}}, 
+                            right: {style:'thin', color: {argb: 'FFE2E8F0'}} 
+                        };
+                    }
+                    
+                    // Mise en forme conditionnelle (prix > 10€)
+                    if (price > 10) {
+                        totalCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFECACA' } };
+                    }
+                    
+                    currentRow++;
+                }
+            });
+            
+            // Sous-total catégorie (FORMULE)
+            compSheet.mergeCells(`A${currentRow}:J${currentRow}`);
+            const subTotalLabel = compSheet.getCell(`A${currentRow}`);
+            subTotalLabel.value = '💰 Sous-total ' + categoryName;
+            subTotalLabel.font = { bold: true, italic: true };
+            subTotalLabel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+            subTotalLabel.border = { top: {style:'medium'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+            
+            const subTotalValue = compSheet.getCell(`K${currentRow}`);
+            subTotalValue.value = { formula: `SOMME(K${categoryStartRow}:K${currentRow - 1})` };
+            subTotalValue.numFmt = '#,##0.00 €';
+            subTotalValue.alignment = { horizontal: 'right' };
+            subTotalValue.font = { bold: true, size: 12 };
+            subTotalValue.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+            subTotalValue.border = { top: {style:'medium'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'} };
+            
+            categoryTotals.push(`K${currentRow}`);
+            currentRow += 2;
+        });
+        
+        // TOTAL GÉNÉRAL (FORMULE)
+        compSheet.mergeCells(`A${currentRow}:J${currentRow}`);
+        const grandTotalLabel = compSheet.getCell(`A${currentRow}`);
+        grandTotalLabel.value = '💎 TOTAL GÉNÉRAL';
+        grandTotalLabel.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+        grandTotalLabel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
+        grandTotalLabel.alignment = { vertical: 'middle', horizontal: 'right' };
+        grandTotalLabel.border = { top: {style:'medium'}, left: {style:'medium'}, bottom: {style:'medium'}, right: {style:'thin'} };
+        
+        const grandTotalValue = compSheet.getCell(`K${currentRow}`);
+        grandTotalValue.value = { formula: categoryTotals.join('+') };
+        grandTotalValue.numFmt = '#,##0.00 €';
+        grandTotalValue.alignment = { vertical: 'middle', horizontal: 'right' };
+        grandTotalValue.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+        grandTotalValue.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF6366F1' } };
+        grandTotalValue.border = { top: {style:'medium'}, left: {style:'thin'}, bottom: {style:'medium'}, right: {style:'medium'} };
+        compSheet.getRow(currentRow).height = 30;
+        
+        // Largeurs colonnes
+        compSheet.getColumn(1).width = 5;   // Checkbox
+        compSheet.getColumn(2).width = 8;   // Qté
+        compSheet.getColumn(3).width = 30;  // Composant
+        compSheet.getColumn(4).width = 18;  // Catégorie
+        compSheet.getColumn(5).width = 10;  // Voltage
+        compSheet.getColumn(6).width = 10;  // Courant
+        compSheet.getColumn(7).width = 18;  // Type
+        compSheet.getColumn(8).width = 20;  // Référence
+        compSheet.getColumn(9).width = 15;  // Fournisseur
+        compSheet.getColumn(10).width = 12; // Prix Unit
+        compSheet.getColumn(11).width = 12; // Prix Total
+        compSheet.getColumn(12).width = 15; // Lien
+        
+        // Figer les en-têtes
+        compSheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 3 }];
+        
+        // Protection (formules verrouillées, cellules jaunes éditables)
+        await compSheet.protect('esp32lab', {
+            selectLockedCells: true,
+            selectUnlockedCells: true,
+            formatCells: false,
+            formatColumns: false,
+            formatRows: false,
+            insertColumns: false,
+            insertRows: false,
+            deleteColumns: false,
+            deleteRows: false
+        });
+        
+        // === ONGLET 3: CODE ARDUINO ===
+        if (f.code) {
+            const codeSheet = workbook.addWorksheet('💻 Code', {
+                properties: { tabColor: { argb: 'FFEF4444' } }
+            });
+            
+            codeSheet.mergeCells('A1:A1');
+            const codeTitle = codeSheet.getCell('A1');
+            codeTitle.value = '💻 CODE ARDUINO';
+            codeTitle.font = { size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+            codeTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEF4444' } };
+            codeTitle.alignment = { vertical: 'middle', horizontal: 'center' };
+            codeSheet.getRow(1).height = 30;
+            
+            const codeCell = codeSheet.getCell('A3');
+            codeCell.value = f.code;
+            codeCell.font = { name: 'Consolas', size: 10 };
+            codeCell.alignment = { wrapText: true, vertical: 'top' };
+            
+            codeSheet.getColumn(1).width = 120;
+        }
+        
+        // === ONGLET 4: NOTES ===
+        if (f.notes) {
+            const notesSheet = workbook.addWorksheet('📝 Notes', {
+                properties: { tabColor: { argb: 'FFFBBF24' } }
+            });
+            
+            notesSheet.mergeCells('A1:A1');
+            const notesTitle = notesSheet.getCell('A1');
+            notesTitle.value = '📝 NOTES & PINOUT';
+            notesTitle.font = { size: 16, bold: true, color: { argb: 'FF1E293B' } };
+            notesTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBBF24' } };
+            notesTitle.alignment = { vertical: 'middle', horizontal: 'center' };
+            notesSheet.getRow(1).height = 30;
+            
+            const notesCell = notesSheet.getCell('A3');
+            notesCell.value = f.notes;
+            notesCell.font = { size: 11 };
+            notesCell.alignment = { wrapText: true, vertical: 'top' };
+            
+            notesSheet.getColumn(1).width = 100;
+        }
+        
+        // === ONGLET 5: INSTRUCTIONS ===
+        const instrSheet = workbook.addWorksheet('ℹ️ Instructions', {
+            properties: { tabColor: { argb: 'FF94A3B8' } }
+        });
+        
+        instrSheet.mergeCells('A1:B1');
+        const instrTitle = instrSheet.getCell('A1');
+        instrTitle.value = 'ℹ️ MODE D\'EMPLOI';
+        instrTitle.font = { size: 16, bold: true };
+        instrTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF94A3B8' } };
+        instrTitle.alignment = { vertical: 'middle', horizontal: 'center' };
+        instrSheet.getRow(1).height = 30;
+        
+        const instructions = [
+            ['📊 Dashboard', 'Vue d\'ensemble du projet avec KPIs et résumé'],
+            ['🛠️ Composants', 'Liste complète - Colonnes jaunes modifiables - Formules protégées'],
+            ['✓ Checkbox', 'Cliquez pour marquer les composants achetés (☐ → ☑)'],
+            ['💰 Prix', 'Les totaux se calculent automatiquement'],
+            ['🔗 Liens', 'Cliquez sur les liens pour accéder aux fiches produits'],
+            ['🔒 Protection', 'Les formules sont verrouillées pour éviter les erreurs'],
+            ['📝 Modification', 'Vous pouvez modifier : Référence et Fournisseur (cellules jaunes)']
+        ];
+        
+        let instrRow = 3;
+        instructions.forEach(([title, desc]) => {
+            const titleCell = instrSheet.getCell(`A${instrRow}`);
+            titleCell.value = title;
+            titleCell.font = { bold: true, size: 11 };
+            titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+            
+            const descCell = instrSheet.getCell(`B${instrRow}`);
+            descCell.value = desc;
+            descCell.alignment = { wrapText: true };
+            
+            instrSheet.getRow(instrRow).height = 25;
+            instrRow++;
+        });
+        
+        instrSheet.getColumn(1).width = 25;
+        instrSheet.getColumn(2).width = 70;
+        
+        // Générer et télécharger
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { 
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        });
+        const fileName = `${f.name.replace(/[^a-z0-9]/gi, '_')}_PRO_${new Date().toISOString().split('T')[0]}.xlsx`;
+        
+        saveAs(blob, fileName);
+        
+        customAlert(`✅ Export Excel Professionnel !\n\n📊 Dashboard avec KPIs\n🛠️ ${f.components.length} composants\n💰 ${totalCost.toFixed(2)} € (formules automatiques)\n🔒 Formules protégées\n📝 Cellules modifiables (jaunes)\n\n📁 ${fileName}`, 'Export réussi');
+        
+    } catch (error) {
+        console.error('Erreur export Excel:', error);
+        customAlert('Erreur lors de la génération du fichier Excel.\n\n' + error.message, 'Erreur');
+    }
+}
+
 // Ajouter aux récents
 function addToRecents(index) {
     const projectName = db[index].name;
@@ -3829,6 +4427,9 @@ function openFolder(i) {
     document.getElementById('edit-difficulty').value = f.difficulty || 'beginner';
     document.getElementById('edit-tags').value = (f.tags && f.tags.length > 0) ? f.tags.join(', ') : '';
     
+    // Charger la carte utilisée
+    document.getElementById('edit-board').value = (f.boards && f.boards.length > 0) ? f.boards[0] : '';
+    
     // Photo du projet final
     if(f.img) {
         document.getElementById('proj-img-preview').src = f.img;
@@ -3908,12 +4509,42 @@ function renderProjectComponents() {
     if (!f.components) f.components = [];
     
     const container = document.getElementById('project-components');
-    if (f.components.length === 0) {
-        container.innerHTML = '<p style="color:#94a3b8; font-size:12px; font-style:italic;">Aucun composant ajouté</p>';
-        return;
+    let html = '';
+    
+    // 1. AFFICHER LA CARTE EN PREMIER
+    if (f.boards && f.boards.length > 0) {
+        const boardId = f.boards[0];
+        const board = arduinoBoards.find(b => b.id === boardId);
+        if (board) {
+            const price = board.price || 0;
+            const buyLink = board.buyLink || '';
+            const priceDisplay = price && buyLink ? 
+                `<a href="${buyLink}" target="_blank" onclick="event.stopPropagation();" style="color:#fbbf24; text-decoration:none; font-size:12px; font-weight:bold;" title="Acheter sur Amazon">
+                    💰 ${price.toFixed(2)} €
+                </a>` : '';
+            
+            html += `
+            <div class="folder-item" style="margin-bottom:12px; padding:10px; border-left:3px solid #fbbf24; background:linear-gradient(135deg, #1e293b 0%, #0f172a 100%);" onclick="showBoardDetail('${boardId}')">
+                <div class="folder-thumb" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; font-size:32px;">
+                    ${board.icon}
+                </div>
+                <div style="flex:1">
+                    <b style="font-size:13px;">🔧 ${board.name}</b><br>
+                    <span style="font-size:10px; opacity:0.6;">Carte Arduino</span>
+                    ${priceDisplay ? `<br>${priceDisplay}` : ''}
+                </div>
+            </div>`;
+        }
     }
     
-    container.innerHTML = f.components.map((comp, idx) => {
+    // 2. PUIS AFFICHER LES COMPOSANTS
+    if (f.components.length === 0) {
+        if (!html) {
+            container.innerHTML = '<p style="color:#94a3b8; font-size:12px; font-style:italic;">Aucun composant ajouté</p>';
+            return;
+        }
+    } else {
+        html += f.components.map((comp, idx) => {
         // Construire le chemin de l'image du composant
         const category = componentCategories.find(c => c.id === comp.categoryId);
         const compId = comp.componentId || comp.id; // Fallback pour anciens projets
@@ -3949,7 +4580,10 @@ function renderProjectComponents() {
             <button onclick="removeProjectComponent(${idx}); event.stopPropagation();" style="background:var(--danger); color:white; border:none; padding:5px 10px; border-radius:5px; font-size:11px;">✕</button>
         </div>
     `;
-    }).join('');
+        }).join('');
+    }
+    
+    container.innerHTML = html;
 }
 
 function openComponentPicker() {
@@ -4420,6 +5054,10 @@ async function saveProject() {
     const tagsInput = document.getElementById('edit-tags').value;
     db[currentIdx].tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
     
+    // Sauvegarder la carte utilisée
+    const selectedBoard = document.getElementById('edit-board').value;
+    db[currentIdx].boards = selectedBoard ? [selectedBoard] : [];
+    
     db[currentIdx].updatedAt = new Date().toISOString();
     await saveProjectToFolder(db[currentIdx]);
     renderFolders(); 
@@ -4440,6 +5078,7 @@ async function duplicateProject() {
         category: original.category || 'other',
         difficulty: original.difficulty || 'beginner',
         tags: JSON.parse(JSON.stringify(original.tags || [])),
+        boards: JSON.parse(JSON.stringify(original.boards || [])),
         favorite: false,
         notes: original.notes,
         code: original.code,

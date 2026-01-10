@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>ESP32 Lab Pro - Ultimate Edition</title>
+    <!-- ExcelJS pour export Excel professionnel avec styles -->
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         :root {
             --bg: #0f172a; --card: #1e293b; --primary: #6366f1;
@@ -583,9 +586,20 @@ void executeCommand(String cmd) {
                 </div>
             </div>
             
+            <label style="color:var(--accent); font-size:11px; font-weight:bold;">🎛️ CARTE UTILISÉE</label>
+            <select id="edit-board" style="width:100%; padding:10px; background:#0f172a; border:1px solid var(--accent); color:white; border-radius:8px; margin-bottom:15px;">
+                <option value="">Aucune carte sélectionnée</option>
+                <option value="uno">🔵 Arduino Uno R3 - 25.00 €</option>
+                <option value="mega">🔴 Arduino Mega 2560 - 45.00 €</option>
+                <option value="nano-esp32">🟢 Arduino Nano ESP32 - 18.00 €</option>
+            </select>
+            
             <label style="color:var(--accent); font-size:11px; font-weight:bold;">COMPOSANTS UTILISÉS</label>
             <div id="project-components" style="margin-bottom:15px;"></div>
-            <button class="btn" style="background:var(--accent); margin-bottom:20px;" onclick="openComponentPicker()">+ AJOUTER DES COMPOSANTS</button>
+            <div style="display:flex; gap:10px; margin-bottom:20px;">
+                <button class="btn" style="background:var(--accent); flex:1;" onclick="openComponentPicker()">+ AJOUTER COMPOSANTS</button>
+                <button class="btn" style="background:#10b981; flex:1;" onclick="exportComponentsCSV()" title="Télécharger la liste en CSV">📊 EXPORT CSV</button>
+            </div>
             
             <label style="color:var(--accent); font-size:11px; font-weight:bold;">NOTES (PINOUT, SCHÉMA)</label>
             <textarea id="edit-notes" rows="4" placeholder="Notes..."></textarea>
